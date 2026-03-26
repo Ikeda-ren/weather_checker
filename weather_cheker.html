@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>気象庁 2府県比較 天気予報</title>
+  <style>
+    body { font-family: "Yu Gothic UI", "ヒラギノ角ゴ Pro W3", Meiryo, sans-serif; margin: 0; background: #f5f7fb; color: #2a2a2a; }
+    .page { max-width: 1200px; margin: 1rem auto; padding: 1rem; }
+    h1 { text-align:center; margin-bottom: 1rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; }
+    .card { border-radius: 10px; background:#fff; border:1px solid #d5d9e2; box-shadow:0 2px 6px rgba(0,0,0,.08); padding: 1rem; }
+    .section { margin-top: 0.75rem; }
+    .section h3 { margin: 0 0 .5rem 0; border-bottom: 2px solid #4a90e2; display:inline-block; padding-bottom:.2rem; font-size:1rem; }
+    .section pre, .section .text { white-space: pre-wrap; line-height:1.6; background: #f8faff; border:1px solid #dce6f6; border-radius:6px; padding:0.75rem; }
+    .table-wrap { overflow-x:auto; }
+    table { width:100%; border-collapse: collapse; margin-top: .5rem; }
+    th,td { border:1px solid #dbe3ee; padding: .45rem .5rem; text-align:center; font-size: 0.88rem; }
+    th { background:#eef5ff; font-weight:700; }
+    .subrow th, .subrow td { font-size:0.83rem; }
+    .label { font-weight:700; margin-bottom: .3rem; display:inline-block; }
+    .badge { display:inline-block; font-size:.75rem; color:#fff; background:#4a90e2; padding:2px 6px; border-radius:4px; margin-left:4px; }
+    .muted { color:#666; font-size:.85rem; }
+    #status { text-align:center; margin-bottom:1rem; }
+    @media(max-width: 767px){ .card { padding: .8rem; } }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>奈良県 / 和歌山県 2府県表示 天気チェック</h1>
+    <div id="status">データ取得中...</div>
+    <div class="grid" id="areas"></div>
+  </div>
+
+  <script>
+    const regions = [
+      { code: "290000", name: "奈良県", office: "奈良地方気象台" },
+      { code: "300000", name: "和歌山県", office: "和歌山地方気象台" }
+    ];
+
+    const getDateLabel = (isoTime)=>{
+      const d = new Date(isoTime);
+      if (Number.isNaN(d.getTime())) return isoTime;
+      return d.toLocaleString("ja-JP", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+    };
+
+    const buildAreaCard = ({ code, name, office }) => {
+      const el = document.createElement("div");
+      el.className = "card";
+      el.id = `area-${code}`;
+      el.innerHTML = `
+        <h2>${name} <span class="badge">${office}</span></h2>
+        <div class="muted" id="updated-${code}"></div>
+        <div class="section"><h3>1. 天気予報</h3><div id="forecast-${code}" class="table-wrap"></div></div>
+        <div class="section"><h3>2. 天気概況</h3><div id="overview-${code}" class="text">読み込み中...</div></div>
+        <div class="section"><h3>3. 気象台からのコメント</h3><div id="comment-${code}" class="text">読み込み中...</div></div>
+      `;
+      return el;
+    };
+
+    const renderForecast = (code, forecastJson, regionName) => {
+      const container = document.getElementById(`forecast-${code}`);
+      container.innerHTML = "";
+      if (!forecastJson || !Array.isArray(forecastJson) || forecastJson.length < 1) {
+        container.innerHTML = `<div class='muted'>天気予報データが取得できませんでした。</div>`;
+        return;
+      }
+
+      const detail = forecastJson[0];
+      const day3 = detail.timeSeries?.[0];
+      const week = forecastJson[1]?.timeSeries?.[0];
+
+      const table = document.createElement("table");
+      const headerRow1 = document.createElement("tr");
+      headerRow1.innerHTML = `<th>エリア</th>` + (day3?.timeDefines?.map(t => `<th>${new Date(t).toLocaleDateString("ja-JP",{month:"2-digit",day:"2-digit"})}</th>`).join("") + (week?"":"");
+      table.appendChild(headerRow1);
+
+      if (day3?.areas?.length) {
+        day3.areas.forEach(area => {
+          const row = document.createElement("tr");
+          row.innerHTML = `<th>${area.area.name}（3日）</th>` + area.weathers.map((w, i) => `<td><strong>${w}</strong><br>${area.winds?.[i]||""}</td>`).join("");
+          table.appendChild(row);
+        });
+      }
+
+      if (week && week.areas?.length) {
+        const prefArea = week.areas.find(a => a.area.code === code);
+        if (prefArea) {
+          const row = document.createElement("tr");
+          row.className = "subrow";
+          row.innerHTML = `<th>${regionName}（週間）</th>` + prefArea.weathers.map((w, i) => `<td>${w || ""}<br>降水確率: ${prefArea.pops?.[i]||""} ${prefArea.reliabilities?.[i]||""}</td>`).join("");
+          table.appendChild(row);
+        }
+      }
+
+      container.appendChild(table);
+    };
+
+    const renderOverview = (code, overviewJson) => {
+      const container = document.getElementById(`overview-${code}`);
+      if (!overviewJson || !overviewJson.text) {
+        container.textContent = "天気概況データが取得できませんでした。";
+        return;
+      }
+      container.textContent = overviewJson.text;
+      const updated = document.getElementById(`updated-${code}`);
+      if (updated) {
+        updated.textContent = `概況更新: ${getDateLabel(overviewJson.reportDatetime)}`;
+      }
+    };
+
+    const renderComment = (code, commentJson) => {
+      const container = document.getElementById(`comment-${code}`);
+      if (!commentJson || (!commentJson.headlineText && !commentJson.warningText && !commentJson.text)) {
+        container.textContent = "気象台コメントがありません。";
+        return;
+      }
+      const parts = [];
+      if (commentJson.headlineText) parts.push(commentJson.headlineText);
+      if (commentJson.warningText) parts.push(commentJson.warningText);
+      if (commentJson.text) parts.push(commentJson.text);
+      if (commentJson.areaTypes && Array.isArray(commentJson.areaTypes)) {
+        const lines = [];
+        commentJson.areaTypes.forEach((at) => {
+          (at.areas || []).forEach((a) => {
+            if (Array.isArray(a.warnings) && a.warnings.length>0) {
+              const areaName = a.area?.name||a.area?.code || a.code || "";
+              const warn = a.warnings.map(w=>w.code+"("+w.status.trim()+")").join("、");
+              lines.push(`${areaName}: ${warn}`);
+            }
+          });
+        });
+        if (lines.length > 0) {
+          parts.push("発表中の警報等: " + lines.join(" / "));
+        }
+      }
+      container.innerHTML = parts.map(t => `<p>${t.replace(/\n/g, '<br>')}</p>`).join("");
+    };
+
+    const fetchRegion = async (region) => {
+      const { code } = region;
+      try {
+        const [forecastResp, overviewResp, warningResp] = await Promise.all([
+          fetch(`https://www.jma.go.jp/bosai/forecast/data/forecast/${code}.json`),
+          fetch(`https://www.jma.go.jp/bosai/forecast/data/overview_forecast/${code}.json`),
+          fetch(`https://www.jma.go.jp/bosai/warning/data/warning/${code}.json`)
+        ]);
+
+        const forecastData = forecastResp.ok ? await forecastResp.json() : null;
+        const overviewData = overviewResp.ok ? await overviewResp.json() : null;
+        const warningData = warningResp.ok ? await warningResp.json() : null;
+
+        renderForecast(code, forecastData, region.name);
+        renderOverview(code, overviewData || {});
+        renderComment(code, warningData || {});
+      } catch (err) {
+        console.error(code, err);
+        document.getElementById(`forecast-${code}`).textContent = "取得中にエラーが発生しました。";
+        document.getElementById(`overview-${code}`).textContent = "取得中にエラーが発生しました。";
+        document.getElementById(`comment-${code}`).textContent = "取得中にエラーが発生しました。";
+      }
+    };
+
+    const init = async () => {
+      const areasContainer = document.getElementById("areas");
+      areasContainer.innerHTML = "";
+      regions.forEach(r => areasContainer.appendChild(buildAreaCard(r)));
+
+      const status = document.getElementById("status");
+      status.textContent = "データ取得中...";
+
+      await Promise.all(regions.map(r => fetchRegion(r)));
+
+      status.textContent = "データ取得完了";
+    };
+
+    window.addEventListener("load", init);
+  </script>
+</body>
+</html>
