@@ -166,12 +166,12 @@ function renderComment(code, data){
 // データ取得（ローカルJSON）
 async function fetchRegion(region){
   try{
-    const base = "data/" + region.prefix;
+    const base = "data/" + region.prefix + "/";
 
     const [f,o,w] = await Promise.all([
-      fetch(base + ".json"),
-      fetch(base + "_overview.json"),
-      fetch(base + "_warning.json")
+      fetch(base + "weather.json"),
+      fetch(base + "overview.json"),
+      fetch(base + "comment.json")
     ]);
 
     const forecast = await f.json();
