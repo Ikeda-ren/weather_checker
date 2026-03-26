@@ -164,27 +164,20 @@ function renderComment(code, data){
 }
 
 // ★ここ修正済み（重要）
-async function fetchRegion(region){
-  try{
-    const base = "data/" + region.prefix + "/";
+async function fetchRegion(region) {
+  const base = `data/${region.code}`;
 
-    const [f,o,w] = await Promise.all([
-      fetch(base + "forecast.json"),
-      fetch(base + "overview.json"),
-      fetch(base + "warning.json")
-    ]);
+  const [weather, overview, comment] = await Promise.all([
+    fetch(`${base}/weather.json`).then(r => r.json()),
+    fetch(`${base}/overview.json`).then(r => r.json()),
+    fetch(`${base}/comment.json`).then(r => r.json())
+  ]);
 
-    const forecast = await f.json();
-    const overview = await o.json();
-    const warning = await w.json();
+  console.log("weather:", weather);
 
-    renderForecast(region.code, forecast);
-    renderOverview(region.code, overview);
-    renderComment(region.code, warning);
-
-  }catch(e){
-    console.error(e);
-  }
+  renderForecast(region.code, weather);
+  renderOverview(region.code, overview);
+  renderComment(region.code, comment);
 }
 
 // 初期化
