@@ -139,11 +139,12 @@
 
     const fetchRegion = async (region) => {
       const { code } = region;
+      const proxy = "https://api.allorigins.win/raw?url=";
       try {
         const [forecastResp, overviewResp, warningResp] = await Promise.all([
-          fetch(`https://www.jma.go.jp/bosai/forecast/data/forecast/${code}.json`),
-          fetch(`https://www.jma.go.jp/bosai/forecast/data/overview_forecast/${code}.json`),
-          fetch(`https://www.jma.go.jp/bosai/warning/data/warning/${code}.json`)
+          fetch(proxy + encodeURIComponent(`https://www.jma.go.jp/bosai/forecast/data/forecast/${code}.json`)),
+          fetch(proxy + encodeURIComponent(`https://www.jma.go.jp/bosai/forecast/data/overview_forecast/${code}.json`)),
+          fetch(proxy + encodeURIComponent(`https://www.jma.go.jp/bosai/warning/data/warning/${code}.json`))
         ]);
 
         const forecastData = forecastResp.ok ? await forecastResp.json() : null;
