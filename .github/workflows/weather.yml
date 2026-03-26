@@ -1,0 +1,38 @@
+name: Fetch Weather Data
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Create directories
+        run: |
+          mkdir -p data/nara
+          mkdir -p data/wakayama
+
+      - name: Fetch Nara
+        run: |
+          curl -s https://www.jma.go.jp/bosai/forecast/data/forecast/290000.json > data/nara/forecast.json
+          curl -s https://www.jma.go.jp/bosai/forecast/data/overview_forecast/290000.json > data/nara/overview.json
+          curl -s https://www.jma.go.jp/bosai/warning/data/warning/290000.json > data/nara/warning.json
+
+      - name: Fetch Wakayama
+        run: |
+          curl -s https://www.jma.go.jp/bosai/forecast/data/forecast/300000.json > data/wakayama/forecast.json
+          curl -s https://www.jma.go.jp/bosai/forecast/data/overview_forecast/300000.json > data/wakayama/overview.json
+          curl -s https://www.jma.go.jp/bosai/warning/data/warning/300000.json > data/wakayama/warning.json
+
+      - name: Commit & Push
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
+          git add data/
+          git commit -m "update weather data" || echo "no change"
+          git push
