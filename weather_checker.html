@@ -1,181 +1,209 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>気象庁 2府県比較 天気予報</title>
-  <style>
-    body { font-family: "Yu Gothic UI", "ヒラギノ角ゴ Pro W3", Meiryo, sans-serif; margin: 0; background: #f5f7fb; color: #2a2a2a; }
-    .page { max-width: 1200px; margin: 1rem auto; padding: 1rem; }
-    h1 { text-align:center; margin-bottom: 1rem; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; }
-    .card { border-radius: 10px; background:#fff; border:1px solid #d5d9e2; box-shadow:0 2px 6px rgba(0,0,0,.08); padding: 1rem; }
-    .section { margin-top: 0.75rem; }
-    .section h3 { margin: 0 0 .5rem 0; border-bottom: 2px solid #4a90e2; display:inline-block; padding-bottom:.2rem; font-size:1rem; }
-    .section pre, .section .text { white-space: pre-wrap; line-height:1.6; background: #f8faff; border:1px solid #dce6f6; border-radius:6px; padding:0.75rem; }
-    .table-wrap { overflow-x:auto; }
-    table { width:100%; border-collapse: collapse; margin-top: .5rem; }
-    th,td { border:1px solid #dbe3ee; padding: .45rem .5rem; text-align:center; font-size: 0.88rem; }
-    th { background:#eef5ff; font-weight:700; }
-    .subrow th, .subrow td { font-size:0.83rem; }
-    .label { font-weight:700; margin-bottom: .3rem; display:inline-block; }
-    .badge { display:inline-block; font-size:.75rem; color:#fff; background:#4a90e2; padding:2px 6px; border-radius:4px; margin-left:4px; }
-    .muted { color:#666; font-size:.85rem; }
-    #status { text-align:center; margin-bottom:1rem; }
-    @media(max-width: 767px){ .card { padding: .8rem; } }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>奈良県 / 和歌山県 天気チェック</title>
+
+<style>
+body {
+  font-family: "Yu Gothic UI", Meiryo, sans-serif;
+  margin: 0;
+  background: #f5f7fb;
+}
+
+.page {
+  max-width: 1200px;
+  margin: auto;
+  padding: 1rem;
+}
+
+h1 {
+  text-align: center;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.card {
+  background: white;
+  border-radius: 10px;
+  padding: 1rem;
+  box-shadow: 0 2px 6px rgba(0,0,0,.1);
+}
+
+.section {
+  margin-top: 1rem;
+}
+
+.section h3 {
+  border-bottom: 2px solid #4a90e2;
+}
+
+.text {
+  background: #f8faff;
+  padding: 0.5rem;
+  border-radius: 6px;
+  white-space: pre-wrap;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  border: 1px solid #ccc;
+  padding: 5px;
+  text-align: center;
+}
+
+#status {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
 </head>
+
 <body>
-  <div class="page">
-    <h1>奈良県 / 和歌山県 2府県表示 天気チェック</h1>
-    <div id="status">データ取得中...</div>
-    <div class="grid" id="areas"></div>
-  </div>
+<div class="page">
+  <h1>奈良県 / 和歌山県 天気</h1>
+  <div id="status">読み込み中...</div>
+  <div class="grid" id="areas"></div>
+</div>
 
-  <script>
-    const regions = [
-      { code: "290000", name: "奈良県", office: "奈良地方気象台" },
-      { code: "300000", name: "和歌山県", office: "和歌山地方気象台" }
-    ];
+<script>
+const regions = [
+  { code: "290000", name: "奈良県", prefix: "nara" },
+  { code: "300000", name: "和歌山県", prefix: "wakayama" }
+];
 
-    const getDateLabel = (isoTime)=>{
-      const d = new Date(isoTime);
-      if (Number.isNaN(d.getTime())) return isoTime;
-      return d.toLocaleString("ja-JP", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
-    };
+// UI生成
+function createCard(region){
+  const el = document.createElement("div");
+  el.className = "card";
+  el.innerHTML = `
+    <h2>${region.name}</h2>
+    <div id="time-${region.code}"></div>
 
-    const buildAreaCard = ({ code, name, office }) => {
-      const el = document.createElement("div");
-      el.className = "card";
-      el.id = `area-${code}`;
-      el.innerHTML = `
-        <h2>${name} <span class="badge">${office}</span></h2>
-        <div class="muted" id="updated-${code}"></div>
-        <div class="section"><h3>1. 天気予報</h3><div id="forecast-${code}" class="table-wrap"></div></div>
-        <div class="section"><h3>2. 天気概況</h3><div id="overview-${code}" class="text">読み込み中...</div></div>
-        <div class="section"><h3>3. 気象台からのコメント</h3><div id="comment-${code}" class="text">読み込み中...</div></div>
-      `;
-      return el;
-    };
+    <div class="section">
+      <h3>天気予報</h3>
+      <div id="forecast-${region.code}"></div>
+    </div>
 
-    const renderForecast = (code, forecastJson, regionName) => {
-      const container = document.getElementById(`forecast-${code}`);
-      container.innerHTML = "";
-      if (!forecastJson || !Array.isArray(forecastJson) || forecastJson.length < 1) {
-        container.innerHTML = `<div class='muted'>天気予報データが取得できませんでした。</div>`;
-        return;
-      }
+    <div class="section">
+      <h3>天気概況</h3>
+      <div id="overview-${region.code}" class="text"></div>
+    </div>
 
-      const detail = forecastJson[0];
-      const day3 = detail.timeSeries?.[0];
-      const week = forecastJson[1]?.timeSeries?.[0];
+    <div class="section">
+      <h3>気象台コメント</h3>
+      <div id="comment-${region.code}" class="text"></div>
+    </div>
+  `;
+  return el;
+}
 
-      const table = document.createElement("table");
-      const headerRow1 = document.createElement("tr");
-      headerRow1.innerHTML = `<th>エリア</th>` + (day3?.timeDefines?.map(t => `<th>${new Date(t).toLocaleDateString("ja-JP",{month:"2-digit",day:"2-digit"})}</th>`).join("") + (week?"":"");
-      table.appendChild(headerRow1);
+// 予報描画
+function renderForecast(code, data){
+  const el = document.getElementById(`forecast-${code}`);
+  if (!data) return el.innerHTML = "データなし";
 
-      if (day3?.areas?.length) {
-        day3.areas.forEach(area => {
-          const row = document.createElement("tr");
-          row.innerHTML = `<th>${area.area.name}（3日）</th>` + area.weathers.map((w, i) => `<td><strong>${w}</strong><br>${area.winds?.[i]||""}</td>`).join("");
-          table.appendChild(row);
-        });
-      }
+  const ts = data[0].timeSeries[0];
+  const dates = ts.timeDefines;
 
-      if (week && week.areas?.length) {
-        const prefArea = week.areas.find(a => a.area.code === code);
-        if (prefArea) {
-          const row = document.createElement("tr");
-          row.className = "subrow";
-          row.innerHTML = `<th>${regionName}（週間）</th>` + prefArea.weathers.map((w, i) => `<td>${w || ""}<br>降水確率: ${prefArea.pops?.[i]||""} ${prefArea.reliabilities?.[i]||""}</td>`).join("");
-          table.appendChild(row);
-        }
-      }
+  let html = "<table><tr><th>日付</th>";
+  dates.forEach(d=>{
+    const date = new Date(d);
+    html += `<th>${date.getMonth()+1}/${date.getDate()}</th>`;
+  });
+  html += "</tr>";
 
-      container.appendChild(table);
-    };
+  ts.areas.forEach(area=>{
+    html += `<tr><th>${area.area.name}</th>`;
+    area.weathers.forEach(w=>{
+      html += `<td>${w}</td>`;
+    });
+    html += "</tr>";
+  });
 
-    const renderOverview = (code, overviewJson) => {
-      const container = document.getElementById(`overview-${code}`);
-      if (!overviewJson || !overviewJson.text) {
-        container.textContent = "天気概況データが取得できませんでした。";
-        return;
-      }
-      container.textContent = overviewJson.text;
-      const updated = document.getElementById(`updated-${code}`);
-      if (updated) {
-        updated.textContent = `概況更新: ${getDateLabel(overviewJson.reportDatetime)}`;
-      }
-    };
+  html += "</table>";
+  el.innerHTML = html;
+}
 
-    const renderComment = (code, commentJson) => {
-      const container = document.getElementById(`comment-${code}`);
-      if (!commentJson || (!commentJson.headlineText && !commentJson.warningText && !commentJson.text)) {
-        container.textContent = "気象台コメントがありません。";
-        return;
-      }
-      const parts = [];
-      if (commentJson.headlineText) parts.push(commentJson.headlineText);
-      if (commentJson.warningText) parts.push(commentJson.warningText);
-      if (commentJson.text) parts.push(commentJson.text);
-      if (commentJson.areaTypes && Array.isArray(commentJson.areaTypes)) {
-        const lines = [];
-        commentJson.areaTypes.forEach((at) => {
-          (at.areas || []).forEach((a) => {
-            if (Array.isArray(a.warnings) && a.warnings.length>0) {
-              const areaName = a.area?.name||a.area?.code || a.code || "";
-              const warn = a.warnings.map(w=>w.code+"("+w.status.trim()+")").join("、");
-              lines.push(`${areaName}: ${warn}`);
-            }
-          });
-        });
-        if (lines.length > 0) {
-          parts.push("発表中の警報等: " + lines.join(" / "));
-        }
-      }
-      container.innerHTML = parts.map(t => `<p>${t.replace(/\n/g, '<br>')}</p>`).join("");
-    };
+// 概況
+function renderOverview(code, data){
+  const el = document.getElementById(`overview-${code}`);
+  el.textContent = data?.text || "なし";
 
-    const fetchRegion = async (region) => {
-      const { code } = region;
-      const proxy = "https://api.allorigins.win/raw?url=";
-      try {
-        const [forecastResp, overviewResp, warningResp] = await Promise.all([
-          fetch(proxy + encodeURIComponent(`https://www.jma.go.jp/bosai/forecast/data/forecast/${code}.json`)),
-          fetch(proxy + encodeURIComponent(`https://www.jma.go.jp/bosai/forecast/data/overview_forecast/${code}.json`)),
-          fetch(proxy + encodeURIComponent(`https://www.jma.go.jp/bosai/warning/data/warning/${code}.json`))
-        ]);
+  const timeEl = document.getElementById(`time-${code}`);
+  if(data?.reportDatetime){
+    timeEl.textContent = "更新: " + new Date(data.reportDatetime).toLocaleString();
+  }
+}
 
-        const forecastData = forecastResp.ok ? await forecastResp.json() : null;
-        const overviewData = overviewResp.ok ? await overviewResp.json() : null;
-        const warningData = warningResp.ok ? await warningResp.json() : null;
+// コメント
+function renderComment(code, data){
+  const el = document.getElementById(`comment-${code}`);
+  if (!data) return el.textContent = "なし";
 
-        renderForecast(code, forecastData, region.name);
-        renderOverview(code, overviewData || {});
-        renderComment(code, warningData || {});
-      } catch (err) {
-        console.error(code, err);
-        document.getElementById(`forecast-${code}`).textContent = "取得中にエラーが発生しました。";
-        document.getElementById(`overview-${code}`).textContent = "取得中にエラーが発生しました。";
-        document.getElementById(`comment-${code}`).textContent = "取得中にエラーが発生しました。";
-      }
-    };
+  let text = "";
+  if(data.headlineText) text += data.headlineText + "\n";
+  if(data.text) text += data.text;
 
-    const init = async () => {
-      const areasContainer = document.getElementById("areas");
-      areasContainer.innerHTML = "";
-      regions.forEach(r => areasContainer.appendChild(buildAreaCard(r)));
+  el.textContent = text || "なし";
+}
 
-      const status = document.getElementById("status");
-      status.textContent = "データ取得中...";
+// データ取得（ローカルJSON）
+async function fetchRegion(region){
+  try{
+    const base = "data/" + region.prefix;
 
-      await Promise.all(regions.map(r => fetchRegion(r)));
+    const [f,o,w] = await Promise.all([
+      fetch(base + ".json"),
+      fetch(base + "_overview.json"),
+      fetch(base + "_warning.json")
+    ]);
 
-      status.textContent = "データ取得完了";
-    };
+    const forecast = await f.json();
+    const overview = await o.json();
+    const warning = await w.json();
 
-    window.addEventListener("load", init);
-  </script>
+    renderForecast(region.code, forecast);
+    renderOverview(region.code, overview);
+    renderComment(region.code, warning);
+
+  }catch(e){
+    console.error(e);
+  }
+}
+
+// 初期化
+async function init(){
+  const areas = document.getElementById("areas");
+
+  regions.forEach(r=>{
+    areas.appendChild(createCard(r));
+  });
+
+  await Promise.all(regions.map(fetchRegion));
+
+  document.getElementById("status").textContent = "更新完了";
+}
+
+// 5分ごと更新
+setInterval(init, 300000);
+
+window.onload = init;
+</script>
 </body>
 </html>
