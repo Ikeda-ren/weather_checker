@@ -1,11 +1,11 @@
-name: Fetch Weather Data v1
+name: Fetch Weather Data
 
 on:
   schedule:
     - cron: "*/10 * * * *"
   workflow_dispatch:
 
-  permissions:
+permissions:
   contents: write
 
 jobs:
