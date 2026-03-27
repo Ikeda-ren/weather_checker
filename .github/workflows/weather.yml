@@ -22,15 +22,15 @@ jobs:
 
       - name: Fetch Nara
         run: |
-          curl -s https://www.jma.go.jp/bosai/forecast/data/forecast/290000.json > data/nara/forecast.json
+          curl -s https://www.jma.go.jp/bosai/forecast/data/forecast/290000.json > data/nara/weather.json
           curl -s https://www.jma.go.jp/bosai/forecast/data/overview_forecast/290000.json > data/nara/overview.json
-          curl -s https://www.jma.go.jp/bosai/warning/data/warning/290000.json > data/nara/warning.json
+          curl -s https://www.jma.go.jp/bosai/warning/data/warning/290000.json > data/nara/comment.json
 
       - name: Fetch Wakayama
         run: |
-          curl -s https://www.jma.go.jp/bosai/forecast/data/forecast/300000.json > data/wakayama/forecast.json
+          curl -s https://www.jma.go.jp/bosai/forecast/data/forecast/300000.json > data/wakayama/weather.json
           curl -s https://www.jma.go.jp/bosai/forecast/data/overview_forecast/300000.json > data/wakayama/overview.json
-          curl -s https://www.jma.go.jp/bosai/warning/data/warning/300000.json > data/wakayama/warning.json
+          curl -s https://www.jma.go.jp/bosai/warning/data/warning/300000.json > data/wakayama/comment.json
 
       - name: Commit & Push
         run: |
