@@ -21,6 +21,9 @@ jobs:
           mkdir -p data/nara
           mkdir -p data/wakayama
 
+      # -------------------------
+      # 奈良
+      # -------------------------
       - name: Fetch Nara Weather
         run: |
           curl -s https://www.jma.go.jp/bosai/forecast/data/forecast/290000.json \
@@ -31,11 +34,6 @@ jobs:
           curl -s https://www.jma.go.jp/bosai/forecast/data/overview_forecast/290000.json \
             -o data/nara/overview.json
 
-      - name: Fetch Nara Warning
-        run: |
-          curl -s https://www.jma.go.jp/bosai/warning/data/warning/290000.json \
-            -o data/nara/warning.json
-
       - name: Fetch Nara Comment TXT
         run: |
           curl -s -A "Mozilla/5.0" \
@@ -45,7 +43,9 @@ jobs:
       - name: Convert Nara Comment to JSON
         run: |
           python3 - <<'PY'
-          import json, re, html
+          import json
+          import re
+          import html
           from pathlib import Path
 
           raw_path = Path("nara_raw.txt")
@@ -73,16 +73,24 @@ jobs:
 
           text = text.replace("\r\n", "\n").replace("\r", "\n").strip()
 
-          # body bgcolor の抽出
+          # body bgcolor を拾う
           bgcolor = "#ffffff"
-          m = re.search(r'(?i)<body[^>]*bgcolor\s*=\s*["\']?([^"\'>\s]+)', text)
+          m = re.search(r'(?is)<body[^>]*bgcolor\s*=\s*["\']?([^"\'>\s]+)', text)
           if m:
               bgcolor = m.group(1).strip()
 
-          # HTML除去
+          # 改行として扱いたいタグ
+          text = re.sub(r'(?i)<br\s*/?>', '\n', text)
+          text = re.sub(r'(?i)</p\s*>', '\n', text)
+          text = re.sub(r'(?i)</div\s*>', '\n', text)
+          text = re.sub(r'(?i)</li\s*>', '\n', text)
+
+          # script/style除去
           text = re.sub(r'(?is)<script.*?>.*?</script>', '', text)
           text = re.sub(r'(?is)<style.*?>.*?</style>', '', text)
-          text = re.sub(r'(?is)<[^>]+>', '\n', text)
+
+          # HTMLタグ除去
+          text = re.sub(r'(?is)<[^>]+>', '', text)
           text = html.unescape(text)
 
           lines = []
@@ -91,6 +99,7 @@ jobs:
               if not s:
                   lines.append("")
                   continue
+              # HTML残骸っぽいものを落とす
               if s.startswith("<") or s.startswith("</"):
                   continue
               if s.lower().startswith("<!doctype"):
@@ -99,15 +108,10 @@ jobs:
 
           text = "\n".join(lines)
 
+          # 「今後の雪」までは残し、その後のURL一覧以降だけ切る
           stop_markers = [
               "〖主な防災情報のURL/リンク〗",
               "主な防災情報のURL/リンク",
-              "背景色などについて",
-              "土砂災害警戒情報・警報・注意報",
-              "キキクル",
-              "雨雲の動き",
-              "今後の雨",
-              "今後の雪",
           ]
           cut_pos = len(text)
           for marker in stop_markers:
@@ -116,14 +120,25 @@ jobs:
                   cut_pos = min(cut_pos, pos)
           text = text[:cut_pos].strip()
 
+          # 連続空行を整理
           text = re.sub(r'\n{3,}', '\n\n', text).strip()
 
           out_path.write_text(
-              json.dumps({"text": text, "bgcolor": bgcolor}, ensure_ascii=False, indent=2),
+              json.dumps(
+                  {
+                      "text": text,
+                      "bgcolor": bgcolor
+                  },
+                  ensure_ascii=False,
+                  indent=2
+              ),
               encoding="utf-8"
           )
           PY
 
+      # -------------------------
+      # 和歌山
+      # -------------------------
       - name: Fetch Wakayama Weather
         run: |
           curl -s https://www.jma.go.jp/bosai/forecast/data/forecast/300000.json \
@@ -134,11 +149,6 @@ jobs:
           curl -s https://www.jma.go.jp/bosai/forecast/data/overview_forecast/300000.json \
             -o data/wakayama/overview.json
 
-      - name: Fetch Wakayama Warning
-        run: |
-          curl -s https://www.jma.go.jp/bosai/warning/data/warning/300000.json \
-            -o data/wakayama/warning.json
-
       - name: Fetch Wakayama Comment TXT
         run: |
           curl -s -A "Mozilla/5.0" \
@@ -148,7 +158,9 @@ jobs:
       - name: Convert Wakayama Comment to JSON
         run: |
           python3 - <<'PY'
-          import json, re, html
+          import json
+          import re
+          import html
           from pathlib import Path
 
           raw_path = Path("wakayama_raw.txt")
@@ -177,13 +189,18 @@ jobs:
           text = text.replace("\r\n", "\n").replace("\r", "\n").strip()
 
           bgcolor = "#ffffff"
-          m = re.search(r'(?i)<body[^>]*bgcolor\s*=\s*["\']?([^"\'>\s]+)', text)
+          m = re.search(r'(?is)<body[^>]*bgcolor\s*=\s*["\']?([^"\'>\s]+)', text)
           if m:
               bgcolor = m.group(1).strip()
 
+          text = re.sub(r'(?i)<br\s*/?>', '\n', text)
+          text = re.sub(r'(?i)</p\s*>', '\n', text)
+          text = re.sub(r'(?i)</div\s*>', '\n', text)
+          text = re.sub(r'(?i)</li\s*>', '\n', text)
+
           text = re.sub(r'(?is)<script.*?>.*?</script>', '', text)
           text = re.sub(r'(?is)<style.*?>.*?</style>', '', text)
-          text = re.sub(r'(?is)<[^>]+>', '\n', text)
+          text = re.sub(r'(?is)<[^>]+>', '', text)
           text = html.unescape(text)
 
           lines = []
@@ -203,12 +220,6 @@ jobs:
           stop_markers = [
               "〖主な防災情報のURL/リンク〗",
               "主な防災情報のURL/リンク",
-              "背景色などについて",
-              "土砂災害警戒情報・警報・注意報",
-              "キキクル",
-              "雨雲の動き",
-              "今後の雨",
-              "今後の雪",
           ]
           cut_pos = len(text)
           for marker in stop_markers:
@@ -220,7 +231,14 @@ jobs:
           text = re.sub(r'\n{3,}', '\n\n', text).strip()
 
           out_path.write_text(
-              json.dumps({"text": text, "bgcolor": bgcolor}, ensure_ascii=False, indent=2),
+              json.dumps(
+                  {
+                      "text": text,
+                      "bgcolor": bgcolor
+                  },
+                  ensure_ascii=False,
+                  indent=2
+              ),
               encoding="utf-8"
           )
           PY
