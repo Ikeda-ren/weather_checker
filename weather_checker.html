@@ -537,12 +537,7 @@
       return await res.json();
     }
 
-    function findSeries(data, predicate) {
-      if (!Array.isArray(data) || !data[1]?.timeSeries) return null;
-      return data[1].timeSeries.find(predicate) || null;
-    }
-
-    function buildHeaderCells(timeDefines) {
+    function buildHeaderCells(timeDefines, includeTime = false) {
       const today = new Date();
       const tomorrow = new Date();
       tomorrow.setDate(today.getDate() + 1);
@@ -552,7 +547,12 @@
         let cls = "";
         if (date.toDateString() === today.toDateString()) cls = "today";
         else if (date.toDateString() === tomorrow.toDateString()) cls = "tomorrow";
-        return `<th class="${cls}">${date.getMonth() + 1}/${date.getDate()}</th>`;
+
+        const label = includeTime
+          ? `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, "0")}時`
+          : `${date.getMonth() + 1}/${date.getDate()}`;
+
+        return `<th class="${cls}">${label}</th>`;
       }).join("");
     }
 
@@ -622,7 +622,7 @@
       }
 
       const ts = data[0].timeSeries[1];
-      let html = `<table><tr><th>地域</th>${buildHeaderCells(ts.timeDefines)}</tr>`;
+      let html = `<table><tr><th>地域</th>${buildHeaderCells(ts.timeDefines, true)}</tr>`;
 
       ts.areas.forEach(area => {
         html += `<tr><th>${area.area?.name || "-"}</th>`;
@@ -639,9 +639,13 @@
     function renderTempTable(code, data) {
       const el = document.getElementById(`temp-${code}`);
 
-      const tempSeries = findSeries(
-        data,
-        ts => Array.isArray(ts.areas) && ts.areas.some(a => Array.isArray(a.tempsMin) || Array.isArray(a.tempsMax))
+      if (!Array.isArray(data) || !data[0]?.timeSeries) {
+        el.innerHTML = `<div class="panel muted">気温データなし</div>`;
+        return;
+      }
+
+      const tempSeries = data[0].timeSeries.find(ts =>
+        Array.isArray(ts.areas) && ts.areas.some(a => Array.isArray(a.temps))
       );
 
       if (!tempSeries) {
@@ -649,28 +653,42 @@
         return;
       }
 
-      const dates = tempSeries.timeDefines || [];
       const areas = tempSeries.areas || [];
+      const times = tempSeries.timeDefines || [];
 
-      let headers = `<th>地域</th>`;
-      dates.forEach(d => {
-        const date = new Date(d);
-        const label = `${String(date.getMonth() + 1).padStart(2, "0")}/${String(date.getDate()).padStart(2, "0")}`;
-        headers += `<th>${label} 最低気温</th><th>${label} 最高気温</th>`;
+      if (!areas.length || !times.length) {
+        el.innerHTML = `<div class="panel muted">気温データなし</div>`;
+        return;
+      }
+
+      const groupedHeaders = [];
+      const maxCols = Math.min(times.length, 4); // 明日まで想定で最大4枠くらい
+
+      for (let i = 0; i < maxCols; i++) {
+        const t = new Date(times[i]);
+        const label = `${String(t.getMonth() + 1).padStart(2, "0")}/${String(t.getDate()).padStart(2, "0")}`;
+        const isMax = t.getHours() >= 12;
+        groupedHeaders.push({
+          label: `${label} ${isMax ? "最高気温" : "最低気温"}`,
+          cls: isMax ? "temp-max" : "temp-min",
+          index: i
+        });
+      }
+
+      let html = `<table><tr><th>地域</th>`;
+      groupedHeaders.forEach(h => {
+        html += `<th>${h.label}</th>`;
       });
-
-      let html = `<table><tr>${headers}</tr>`;
+      html += `</tr>`;
 
       areas.forEach(area => {
         html += `<tr><th>${area.area?.name || "-"}</th>`;
+        const temps = area.temps || [];
 
-        const mins = area.tempsMin || [];
-        const maxs = area.tempsMax || [];
-
-        for (let i = 0; i < dates.length; i++) {
-          html += `<td class="temp-min">${mins[i] ?? "-"}${mins[i] !== undefined && mins[i] !== "" ? "℃" : ""}</td>`;
-          html += `<td class="temp-max">${maxs[i] ?? "-"}${maxs[i] !== undefined && maxs[i] !== "" ? "℃" : ""}</td>`;
-        }
+        groupedHeaders.forEach(h => {
+          const value = temps[h.index];
+          html += `<td class="${h.cls}">${value ?? "-"}${value !== undefined && value !== "" ? "℃" : ""}</td>`;
+        });
 
         html += `</tr>`;
       });
