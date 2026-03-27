@@ -13,78 +13,94 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # =========================
-      # リポジトリ取得
-      # =========================
       - name: Checkout
         uses: actions/checkout@v4
 
-      # =========================
-      # フォルダ作成
-      # =========================
       - name: Create directories
         run: |
           mkdir -p data/nara
           mkdir -p data/wakayama
 
-      # =========================
-      # 奈良（天気・概況）
-      # =========================
       - name: Fetch Nara Data
         run: |
           curl -s https://www.jma.go.jp/bosai/forecast/data/forecast/290000.json -o data/nara/weather.json
           curl -s https://www.jma.go.jp/bosai/forecast/data/overview_forecast/290000.json -o data/nara/overview.json
 
-      # =========================
-      # 奈良（コメント）
-      # =========================
       - name: Fetch Nara Comment
         run: |
-          echo "奈良コメント取得"
-
           curl -s -A "Mozilla/5.0" \
-          https://www.jma.go.jp/bosai/forecaster_comment/data/comments/290000.txt \
-          -o raw.txt
+            https://www.jma.go.jp/bosai/forecaster_comment/data/comments/290000.txt \
+            -o nara_raw.txt
 
-          if [ -s raw.txt ]; then
-            # 文字化け対策（壊れた文字は無視）
-            iconv -f SHIFT_JIS -t UTF-8 -c raw.txt > data/nara/comment.txt
-          else
-            echo "コメント取得失敗" > data/nara/comment.txt
-          fi
+      - name: Convert Nara Comment to JSON
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
 
-          rm -f raw.txt
+          raw = Path("nara_raw.txt").read_bytes()
 
-      # =========================
-      # 和歌山（天気・概況）
-      # =========================
+          text = None
+          for enc in ["cp932", "shift_jis", "utf-8", "euc_jp"]:
+              try:
+                  text = raw.decode(enc)
+                  break
+              except UnicodeDecodeError:
+                  pass
+
+          if text is None:
+              text = raw.decode("cp932", errors="replace")
+
+          text = text.replace("\r\n", "\n").replace("\r", "\n").strip()
+
+          Path("data/nara/comment.json").write_text(
+              json.dumps({"text": text}, ensure_ascii=False, indent=2),
+              encoding="utf-8"
+          )
+          PY
+
       - name: Fetch Wakayama Data
         run: |
           curl -s https://www.jma.go.jp/bosai/forecast/data/forecast/300000.json -o data/wakayama/weather.json
           curl -s https://www.jma.go.jp/bosai/forecast/data/overview_forecast/300000.json -o data/wakayama/overview.json
 
-      # =========================
-      # 和歌山（コメント）
-      # =========================
       - name: Fetch Wakayama Comment
         run: |
-          echo "和歌山コメント取得"
-
           curl -s -A "Mozilla/5.0" \
-          https://www.jma.go.jp/bosai/forecaster_comment/data/comments/300000.txt \
-          -o raw.txt
+            https://www.jma.go.jp/bosai/forecaster_comment/data/comments/300000.txt \
+            -o wakayama_raw.txt
 
-          if [ -s raw.txt ]; then
-            iconv -f SHIFT_JIS -t UTF-8 -c raw.txt > data/wakayama/comment.txt
-          else
-            echo "コメント取得失敗" > data/wakayama/comment.txt
-          fi
+      - name: Convert Wakayama Comment to JSON
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
 
-          rm -f raw.txt
+          raw = Path("wakayama_raw.txt").read_bytes()
 
-      # =========================
-      # コミット＆プッシュ
-      # =========================
+          text = None
+          for enc in ["cp932", "shift_jis", "utf-8", "euc_jp"]:
+              try:
+                  text = raw.decode(enc)
+                  break
+              except UnicodeDecodeError:
+                  pass
+
+          if text is None:
+              text = raw.decode("cp932", errors="replace")
+
+          text = text.replace("\r\n", "\n").replace("\r", "\n").strip()
+
+          Path("data/wakayama/comment.json").write_text(
+              json.dumps({"text": text}, ensure_ascii=False, indent=2),
+              encoding="utf-8"
+          )
+          PY
+
+      - name: Cleanup temp files
+        run: |
+          rm -f nara_raw.txt wakayama_raw.txt
+
       - name: Commit & Push
         run: |
           git config --global user.name "github-actions"
