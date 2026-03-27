@@ -151,17 +151,23 @@ function createCard(r){
 
 function renderForecast(code, data){
   const el = document.getElementById("forecast-" + code);
-  const ts = data[0].timeSeries[0];
 
-  const today = new Date().getDate();
+  if (!data || !data[0]) {
+    el.innerHTML = "データなし";
+    return;
+  }
+
+  const ts = data[0].timeSeries[0];
+  if (!ts) {
+    el.innerHTML = "データなし";
+    return;
+  }
 
   let html = "<table><tr><th>日付</th>";
 
   ts.timeDefines.forEach(d=>{
     const date = new Date(d);
-    const day = date.getDate();
-    const cls = day === today ? "today" : "";
-    html += `<th class="${cls}">${date.getMonth()+1}/${day}</th>`;
+    html += `<th>${date.getMonth()+1}/${date.getDate()}</th>`;
   });
 
   html += "</tr>";
@@ -175,6 +181,7 @@ function renderForecast(code, data){
   });
 
   html += "</table>";
+
   el.innerHTML = html;
 }
 
