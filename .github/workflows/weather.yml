@@ -13,91 +13,59 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # =========================
-      # リポジトリ取得
-      # =========================
       - name: Checkout
         uses: actions/checkout@v4
 
-      # =========================
-      # フォルダ作成
-      # =========================
       - name: Create directories
         run: |
           mkdir -p data/nara
           mkdir -p data/wakayama
 
-      # =========================
-      # 奈良（天気）
-      # =========================
-      - name: Fetch Nara Weather
+      # 奈良
+      - name: Fetch Nara Data
         run: |
-          curl -s https://www.jma.go.jp/bosai/forecast/data/forecast/290000.json \
-          -o data/nara/weather.json
+          curl -s https://www.jma.go.jp/bosai/forecast/data/forecast/290000.json -o data/nara/weather.json
+          curl -s https://www.jma.go.jp/bosai/forecast/data/overview_forecast/290000.json -o data/nara/overview.json
 
-      # =========================
-      # 奈良（概況）
-      # =========================
-      - name: Fetch Nara Overview
+      - name: Fetch Nara Comment
         run: |
-          curl -s https://www.jma.go.jp/bosai/forecast/data/overview_forecast/290000.json \
-          -o data/nara/overview.json
+          echo "奈良コメント取得"
 
-      # =========================
-      # 奈良（コメント）
-      # =========================
-      - name: Fetch Nara Comment（Shift_JIS → UTF-8）
-        run: |
-          echo "Fetching Nara comment..."
           curl -s -A "Mozilla/5.0" \
           https://www.jma.go.jp/bosai/forecaster_comment/data/comments/290000.txt \
           -o raw.txt
 
-          if [ ! -s raw.txt ]; then
-            echo "Download failed!"
-            exit 1
+          if [ -s raw.txt ]; then
+            iconv -f SHIFT_JIS -t UTF-8 raw.txt > data/nara/comment.txt
+          else
+            echo "コメント取得失敗" > data/nara/comment.txt
           fi
 
-          iconv -f SHIFT_JIS -t UTF-8 raw.txt > data/nara/comment.txt
-          rm raw.txt
+          rm -f raw.txt
 
-      # =========================
-      # 和歌山（天気）
-      # =========================
-      - name: Fetch Wakayama Weather
+      # 和歌山
+      - name: Fetch Wakayama Data
         run: |
-          curl -s https://www.jma.go.jp/bosai/forecast/data/forecast/300000.json \
-          -o data/wakayama/weather.json
+          curl -s https://www.jma.go.jp/bosai/forecast/data/forecast/300000.json -o data/wakayama/weather.json
+          curl -s https://www.jma.go.jp/bosai/forecast/data/overview_forecast/300000.json -o data/wakayama/overview.json
 
-      # =========================
-      # 和歌山（概況）
-      # =========================
-      - name: Fetch Wakayama Overview
+      - name: Fetch Wakayama Comment
         run: |
-          curl -s https://www.jma.go.jp/bosai/forecast/data/overview_forecast/300000.json \
-          -o data/wakayama/overview.json
+          echo "和歌山コメント取得"
 
-      # =========================
-      # 和歌山（コメント）
-      # =========================
-      - name: Fetch Wakayama Comment（Shift_JIS → UTF-8）
-        run: |
-          echo "Fetching Wakayama comment..."
           curl -s -A "Mozilla/5.0" \
           https://www.jma.go.jp/bosai/forecaster_comment/data/comments/300000.txt \
           -o raw.txt
 
-          if [ ! -s raw.txt ]; then
-            echo "Download failed!"
-            exit 1
+          if [ -s raw.txt ]; then
+            iconv -f SHIFT_JIS -t UTF-8 raw.txt > data/wakayama/comment.txt
+          else
+            echo "コメント取得失敗" > data/wakayama/comment.txt
           fi
 
-          iconv -f SHIFT_JIS -t UTF-8 raw.txt > data/wakayama/comment.txt
-          rm raw.txt
+          rm -f raw.txt
 
-      # =========================
-      # コミット＆プッシュ（強制）
-      # =========================
+      # Commit
       - name: Commit & Push
         run: |
           git config --global user.name "github-actions"
