@@ -17,10 +17,6 @@
       --today: #ffe082;
       --tomorrow: #bbdefb;
       --shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-
-      --comment-bg-normal: #ffffff;
-      --comment-bg-advisory: #fff8cc;
-      --comment-bg-warning: #ffe1e1;
     }
 
     body.dark {
@@ -34,10 +30,6 @@
       --today: #7c5c00;
       --tomorrow: #1d4ed8;
       --shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
-
-      --comment-bg-normal: #111827;
-      --comment-bg-advisory: #5b4b00;
-      --comment-bg-warning: #5a1e1e;
     }
 
     * {
@@ -99,8 +91,9 @@
 
     .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(560px, 1fr));
       gap: 18px;
+      align-items: start;
     }
 
     .card {
@@ -109,6 +102,7 @@
       padding: 18px;
       box-shadow: var(--shadow);
       border: 1px solid rgba(255,255,255,.12);
+      min-width: 0;
     }
 
     .card h2 {
@@ -144,16 +138,7 @@
     }
 
     .comment-panel {
-      background: var(--comment-bg-normal);
       transition: background-color .2s ease;
-    }
-
-    .comment-panel.level-advisory {
-      background: var(--comment-bg-advisory);
-    }
-
-    .comment-panel.level-warning {
-      background: var(--comment-bg-warning);
     }
 
     .table-wrap {
@@ -223,7 +208,11 @@
       opacity: 0.9;
     }
 
-    @media (max-width: 768px) {
+    @media (max-width: 620px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
       header h1 {
         font-size: 1.4rem;
       }
@@ -309,6 +298,17 @@
       return await res.json();
     }
 
+    function normalizeBgColor(bgcolor) {
+      if (!bgcolor) return "";
+      const v = String(bgcolor).trim();
+
+      if (/^#[0-9a-fA-F]{3,8}$/.test(v)) return v;
+      if (/^[0-9a-fA-F]{6}$/.test(v)) return `#${v}`;
+      if (/^[0-9a-fA-F]{3}$/.test(v)) return `#${v}`;
+
+      return v;
+    }
+
     function renderForecast(code, data) {
       const el = document.getElementById(`forecast-${code}`);
 
@@ -370,28 +370,7 @@
       }
     }
 
-    function getWarningLevel(data) {
-      if (!Array.isArray(data) || !data[0]?.areas) return "normal";
-
-      let hasWarning = false;
-      let hasAdvisory = false;
-
-      for (const area of data[0].areas) {
-        for (const w of (area.warnings || [])) {
-          const status = (w.status || "").trim();
-          if (!status || status === "なし" || status === "解除") continue;
-
-          if (status.includes("警報")) hasWarning = true;
-          else hasAdvisory = true;
-        }
-      }
-
-      if (hasWarning) return "warning";
-      if (hasAdvisory) return "advisory";
-      return "normal";
-    }
-
-    function renderComment(code, data, warningData) {
+    function renderComment(code, data) {
       const el = document.getElementById(`comment-${code}`);
 
       if (!data || typeof data !== "object") {
@@ -399,27 +378,25 @@
         return;
       }
 
-      el.classList.remove("level-warning", "level-advisory");
-
-      const level = getWarningLevel(warningData);
-      if (level === "warning") el.classList.add("level-warning");
-      if (level === "advisory") el.classList.add("level-advisory");
-
       el.textContent = data.text || "コメントなし";
+
+      const bg = normalizeBgColor(data.bgcolor);
+      if (bg) {
+        el.style.backgroundColor = bg;
+      }
     }
 
     async function fetchRegion(region) {
       try {
-        const [weather, overview, comment, warning] = await Promise.all([
+        const [weather, overview, comment] = await Promise.all([
           fetchJson(`${region.path}/weather.json`),
           fetchJson(`${region.path}/overview.json`),
-          fetchJson(`${region.path}/comment.json`),
-          fetchJson(`${region.path}/warning.json`)
+          fetchJson(`${region.path}/comment.json`)
         ]);
 
         renderForecast(region.code, weather);
         renderOverview(region.code, overview);
-        renderComment(region.code, comment, warning);
+        renderComment(region.code, comment);
       } catch (err) {
         console.error(region.name, err);
 
