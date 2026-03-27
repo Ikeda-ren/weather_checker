@@ -3,26 +3,45 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>天気ダッシュボード</title>
+<title>天気ダッシュボード Pro</title>
 
 <style>
+:root {
+  --bg: linear-gradient(135deg, #4facfe, #00f2fe);
+  --card: #fff;
+  --text: #333;
+}
+
+body.dark {
+  --bg: #1e1e1e;
+  --card: #2c2c2c;
+  --text: #eee;
+}
+
 body {
   margin: 0;
   font-family: "Segoe UI", "Yu Gothic", sans-serif;
-  background: linear-gradient(135deg, #4facfe, #00f2fe);
-  color: #333;
+  background: var(--bg);
+  color: var(--text);
 }
 
 /* ヘッダー */
 header {
+  position: sticky;
+  top: 0;
   text-align: center;
-  padding: 1.5rem;
+  padding: 1rem;
+  background: rgba(0,0,0,0.2);
   color: white;
+  backdrop-filter: blur(10px);
 }
 
-#status {
-  font-size: 0.9rem;
-  opacity: 0.8;
+button {
+  margin-top: 5px;
+  padding: 5px 10px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
 }
 
 /* グリッド */
@@ -35,27 +54,10 @@ header {
 
 /* カード */
 .card {
-  background: white;
+  background: var(--card);
   border-radius: 16px;
   padding: 1rem;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-  transition: 0.2s;
-}
-
-.card:hover {
-  transform: translateY(-5px);
-}
-
-/* 見出し */
-h2 {
-  margin: 0 0 0.5rem;
-}
-
-/* 更新時刻 */
-.time {
-  font-size: 0.8rem;
-  color: #666;
-  margin-bottom: 0.5rem;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
 }
 
 /* セクション */
@@ -63,19 +65,11 @@ h2 {
   margin-top: 1rem;
 }
 
-.section h3 {
-  margin-bottom: 0.3rem;
-  border-left: 4px solid #4facfe;
-  padding-left: 6px;
-}
-
-/* テキスト */
 .text {
-  background: #f1f5ff;
+  background: rgba(0,0,0,0.05);
   padding: 0.5rem;
   border-radius: 8px;
   white-space: pre-wrap;
-  font-size: 0.9rem;
 }
 
 /* テーブル */
@@ -87,31 +81,24 @@ table {
 
 th, td {
   padding: 5px;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid #ccc;
 }
 
-th {
-  background: #f0f4ff;
-}
-
-/* 今日 */
-.today {
-  background: #ffe082 !important;
-}
+.today { background: #ffe082; }
+.tomorrow { background: #bbdefb; }
 
 /* 警報 */
-.alert {
-  background: #ffebee;
-  border-left: 6px solid red;
-}
+.alert-high { border-left: 6px solid red; }
+.alert-mid { border-left: 6px solid orange; }
 </style>
 </head>
 
 <body>
 
 <header>
-  <h1>天気ダッシュボード</h1>
+  <h1>天気ダッシュボード Pro</h1>
   <div id="status">読み込み中...</div>
+  <button onclick="toggleDark()">ダークモード</button>
 </header>
 
 <div class="grid" id="areas"></div>
@@ -122,6 +109,16 @@ const regions = [
   { code: "300000", name: "和歌山県", path: "data/wakayama" }
 ];
 
+// 🌤 アイコン
+function icon(w){
+  if (w.includes("晴")) return "☀️";
+  if (w.includes("曇")) return "☁️";
+  if (w.includes("雨")) return "🌧";
+  if (w.includes("雪")) return "❄️";
+  return "🌈";
+}
+
+// UI
 function createCard(r){
   const el = document.createElement("div");
   el.className = "card";
@@ -129,7 +126,7 @@ function createCard(r){
 
   el.innerHTML = `
     <h2>${r.name}</h2>
-    <div class="time" id="time-${r.code}"></div>
+    <div id="time-${r.code}"></div>
 
     <div class="section">
       <h3>天気予報</h3>
@@ -137,124 +134,135 @@ function createCard(r){
     </div>
 
     <div class="section">
-      <h3>天気概況</h3>
+      <h3>概況</h3>
       <div id="overview-${r.code}" class="text"></div>
     </div>
 
     <div class="section">
-      <h3>気象警報</h3>
+      <h3>警報</h3>
       <div id="comment-${r.code}" class="text"></div>
     </div>
   `;
   return el;
 }
 
+// 予報
 function renderForecast(code, data){
-  const el = document.getElementById("forecast-" + code);
-
-  if (!data || !data[0]) {
-    el.innerHTML = "データなし";
-    return;
-  }
-
+  const el = document.getElementById("forecast-"+code);
   const ts = data[0].timeSeries[0];
-  if (!ts) {
-    el.innerHTML = "データなし";
-    return;
-  }
+
+  const today = new Date();
+  const tomorrow = new Date();
+  tomorrow.setDate(today.getDate()+1);
 
   let html = "<table><tr><th>日付</th>";
 
   ts.timeDefines.forEach(d=>{
     const date = new Date(d);
-    html += `<th>${date.getMonth()+1}/${date.getDate()}</th>`;
+    let cls="";
+    if(date.toDateString()===today.toDateString()) cls="today";
+    if(date.toDateString()===tomorrow.toDateString()) cls="tomorrow";
+
+    html += `<th class="${cls}">${date.getMonth()+1}/${date.getDate()}</th>`;
   });
 
-  html += "</tr>";
+  html+="</tr>";
 
   ts.areas.forEach(a=>{
     html += `<tr><th>${a.area.name}</th>`;
     a.weathers.forEach(w=>{
-      html += `<td>${w}</td>`;
+      html += `<td>${icon(w)}<br>${w}</td>`;
     });
     html += "</tr>";
   });
 
-  html += "</table>";
-
+  html+="</table>";
   el.innerHTML = html;
 }
 
+// 概況
 function renderOverview(code, data){
-  document.getElementById("overview-" + code).textContent = data.text || "なし";
+  document.getElementById("overview-"+code).textContent = data.text || "なし";
 
   if(data.reportDatetime){
-    document.getElementById("time-" + code).textContent =
+    document.getElementById("time-"+code).textContent =
       "更新: " + new Date(data.reportDatetime).toLocaleString();
   }
 }
 
+// 警報
 function renderComment(code, data){
-  const el = document.getElementById("comment-" + code);
-  const card = document.getElementById("card-" + code);
+  const el = document.getElementById("comment-"+code);
+  const card = document.getElementById("card-"+code);
 
-  if (!data || !data[0] || !data[0].areas) {
-    el.textContent = "なし";
-    return;
-  }
+  if (!data || !data[0]) return;
 
-  let text = "";
+  let text="";
 
-  data[0].areas.forEach(area => {
-    const warnings = area.warnings
-      .filter(w => w.status !== "なし")
-      .map(w => w.name);
+  data[0].areas.forEach(a=>{
+    const list = a.warnings
+      .filter(w=>w.status!=="なし")
+      .map(w=>w.name);
 
-    if (warnings.length > 0) {
-      text += `${area.area.name}: ${warnings.join(", ")}\n`;
+    if(list.length){
+      text += `${a.area.name}: ${list.join(", ")}\n`;
     }
   });
 
   el.textContent = text || "なし";
 
-  if (text) {
-    card.classList.add("alert");
+  if(text.includes("警報")){
+    card.classList.add("alert-high");
+  } else if(text.includes("注意報")){
+    card.classList.add("alert-mid");
   }
 }
 
+// 取得
 async function fetchRegion(r){
   try{
     const [f,o,c] = await Promise.all([
-      fetch(`${r.path}/weather.json`).then(res=>res.json()),
-      fetch(`${r.path}/overview.json`).then(res=>res.json()),
-      fetch(`${r.path}/comment.json`).then(res=>res.json())
+      fetch(`${r.path}/weather.json`).then(r=>r.json()),
+      fetch(`${r.path}/overview.json`).then(r=>r.json()),
+      fetch(`${r.path}/comment.json`).then(r=>r.json())
     ]);
 
-    renderForecast(r.code, f);
-    renderOverview(r.code, o);
-    renderComment(r.code, c);
+    renderForecast(r.code,f);
+    renderOverview(r.code,o);
+    renderComment(r.code,c);
 
   }catch(e){
     console.error(e);
+    document.getElementById("status").textContent="取得失敗";
   }
 }
 
+// 初期化
 async function init(){
+  document.getElementById("status").textContent="更新中...";
   const areas = document.getElementById("areas");
-  areas.innerHTML = "";
+  areas.innerHTML="";
 
-  regions.forEach(r=>{
-    areas.appendChild(createCard(r));
-  });
+  regions.forEach(r=>areas.appendChild(createCard(r)));
 
   await Promise.all(regions.map(fetchRegion));
 
   document.getElementById("status").textContent =
-    "最終更新: " + new Date().toLocaleTimeString();
+    "最終更新: "+new Date().toLocaleTimeString();
 }
 
-setInterval(init, 300000);
-window.onload = init;
+setInterval(init,300000);
+window.onload=init;
+
+// ダークモード
+function toggleDark(){
+  document.body.classList.toggle("dark");
+}
+
+// PWA（簡易）
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js');
+}
 </script>
 
 </body>
