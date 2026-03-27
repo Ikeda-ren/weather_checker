@@ -13,23 +13,51 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Create directories
         run: |
           mkdir -p data/nara
           mkdir -p data/wakayama
 
-      - name: Fetch Nara
+      # =========================
+      # 奈良
+      # =========================
+      - name: Fetch Nara Weather
         run: |
           curl -s https://www.jma.go.jp/bosai/forecast/data/forecast/290000.json > data/nara/weather.json
+
+      - name: Fetch Nara Overview
+        run: |
           curl -s https://www.jma.go.jp/bosai/forecast/data/overview_forecast/290000.json > data/nara/overview.json
 
-      - name: Fetch Wakayama
+      - name: Fetch Nara Comment（文字コード変換）
+        run: |
+          curl -s https://www.jma.go.jp/bosai/forecaster_comment/data/comments/290000.txt \
+          | iconv -f SHIFT_JIS -t UTF-8 \
+          > data/nara/comment.txt
+
+      # =========================
+      # 和歌山
+      # =========================
+      - name: Fetch Wakayama Weather
         run: |
           curl -s https://www.jma.go.jp/bosai/forecast/data/forecast/300000.json > data/wakayama/weather.json
+
+      - name: Fetch Wakayama Overview
+        run: |
           curl -s https://www.jma.go.jp/bosai/forecast/data/overview_forecast/300000.json > data/wakayama/overview.json
 
+      - name: Fetch Wakayama Comment（文字コード変換）
+        run: |
+          curl -s https://www.jma.go.jp/bosai/forecaster_comment/data/comments/300000.txt \
+          | iconv -f SHIFT_JIS -t UTF-8 \
+          > data/wakayama/comment.txt
+
+      # =========================
+      # コミット
+      # =========================
       - name: Commit & Push
         run: |
           git config --global user.name "github-actions"
