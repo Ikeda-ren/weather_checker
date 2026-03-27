@@ -28,22 +28,30 @@ jobs:
           mkdir -p data/wakayama
 
       # =========================
-      # 奈良
+      # 奈良（天気）
       # =========================
       - name: Fetch Nara Weather
         run: |
-          curl -f -s https://www.jma.go.jp/bosai/forecast/data/forecast/290000.json \
+          curl -s https://www.jma.go.jp/bosai/forecast/data/forecast/290000.json \
           -o data/nara/weather.json
 
+      # =========================
+      # 奈良（概況）
+      # =========================
       - name: Fetch Nara Overview
         run: |
-          curl -f -s https://www.jma.go.jp/bosai/forecast/data/overview_forecast/290000.json \
+          curl -s https://www.jma.go.jp/bosai/forecast/data/overview_forecast/290000.json \
           -o data/nara/overview.json
 
+      # =========================
+      # 奈良（コメント）
+      # =========================
       - name: Fetch Nara Comment（Shift_JIS → UTF-8）
         run: |
           echo "Fetching Nara comment..."
-          curl -f -s https://www.jma.go.jp/bosai/forecaster_comment/data/comments/290000.txt -o raw.txt
+          curl -s -A "Mozilla/5.0" \
+          https://www.jma.go.jp/bosai/forecaster_comment/data/comments/290000.txt \
+          -o raw.txt
 
           if [ ! -s raw.txt ]; then
             echo "Download failed!"
@@ -54,22 +62,30 @@ jobs:
           rm raw.txt
 
       # =========================
-      # 和歌山
+      # 和歌山（天気）
       # =========================
       - name: Fetch Wakayama Weather
         run: |
-          curl -f -s https://www.jma.go.jp/bosai/forecast/data/forecast/300000.json \
+          curl -s https://www.jma.go.jp/bosai/forecast/data/forecast/300000.json \
           -o data/wakayama/weather.json
 
+      # =========================
+      # 和歌山（概況）
+      # =========================
       - name: Fetch Wakayama Overview
         run: |
-          curl -f -s https://www.jma.go.jp/bosai/forecast/data/overview_forecast/300000.json \
+          curl -s https://www.jma.go.jp/bosai/forecast/data/overview_forecast/300000.json \
           -o data/wakayama/overview.json
 
+      # =========================
+      # 和歌山（コメント）
+      # =========================
       - name: Fetch Wakayama Comment（Shift_JIS → UTF-8）
         run: |
           echo "Fetching Wakayama comment..."
-          curl -f -s https://www.jma.go.jp/bosai/forecaster_comment/data/comments/300000.txt -o raw.txt
+          curl -s -A "Mozilla/5.0" \
+          https://www.jma.go.jp/bosai/forecaster_comment/data/comments/300000.txt \
+          -o raw.txt
 
           if [ ! -s raw.txt ]; then
             echo "Download failed!"
@@ -80,12 +96,12 @@ jobs:
           rm raw.txt
 
       # =========================
-      # コミット＆プッシュ
+      # コミット＆プッシュ（強制）
       # =========================
       - name: Commit & Push
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
           git add data/
-          git diff --quiet && git diff --staged --quiet || git commit -m "update weather data"
+          git commit -m "update weather data $(date)" || echo "no change"
           git push
