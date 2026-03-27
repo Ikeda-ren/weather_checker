@@ -21,12 +21,17 @@ jobs:
           mkdir -p data/nara
           mkdir -p data/wakayama
 
-      - name: Fetch Nara Data
+      - name: Fetch Nara Weather
         run: |
-          curl -s https://www.jma.go.jp/bosai/forecast/data/forecast/290000.json -o data/nara/weather.json
-          curl -s https://www.jma.go.jp/bosai/forecast/data/overview_forecast/290000.json -o data/nara/overview.json
+          curl -s https://www.jma.go.jp/bosai/forecast/data/forecast/290000.json \
+            -o data/nara/weather.json
 
-      - name: Fetch Nara Comment
+      - name: Fetch Nara Overview
+        run: |
+          curl -s https://www.jma.go.jp/bosai/forecast/data/overview_forecast/290000.json \
+            -o data/nara/overview.json
+
+      - name: Fetch Nara Comment TXT
         run: |
           curl -s -A "Mozilla/5.0" \
             https://www.jma.go.jp/bosai/forecaster_comment/data/comments/290000.txt \
@@ -38,7 +43,17 @@ jobs:
           import json
           from pathlib import Path
 
-          raw = Path("nara_raw.txt").read_bytes()
+          raw_path = Path("nara_raw.txt")
+          out_path = Path("data/nara/comment.json")
+
+          if not raw_path.exists() or raw_path.stat().st_size == 0:
+              out_path.write_text(
+                  json.dumps({"text": "コメント取得失敗"}, ensure_ascii=False, indent=2),
+                  encoding="utf-8"
+              )
+              raise SystemExit(0)
+
+          raw = raw_path.read_bytes()
 
           text = None
           for enc in ["cp932", "shift_jis", "utf-8", "euc_jp"]:
@@ -51,20 +66,30 @@ jobs:
           if text is None:
               text = raw.decode("cp932", errors="replace")
 
-          text = text.replace("\r\n", "\n").replace("\r", "\n").strip()
+          text = (
+              text.replace("\r\n", "\n")
+                  .replace("\r", "\n")
+                  .replace("\u3000", " ")
+                  .strip()
+          )
 
-          Path("data/nara/comment.json").write_text(
+          out_path.write_text(
               json.dumps({"text": text}, ensure_ascii=False, indent=2),
               encoding="utf-8"
           )
           PY
 
-      - name: Fetch Wakayama Data
+      - name: Fetch Wakayama Weather
         run: |
-          curl -s https://www.jma.go.jp/bosai/forecast/data/forecast/300000.json -o data/wakayama/weather.json
-          curl -s https://www.jma.go.jp/bosai/forecast/data/overview_forecast/300000.json -o data/wakayama/overview.json
+          curl -s https://www.jma.go.jp/bosai/forecast/data/forecast/300000.json \
+            -o data/wakayama/weather.json
 
-      - name: Fetch Wakayama Comment
+      - name: Fetch Wakayama Overview
+        run: |
+          curl -s https://www.jma.go.jp/bosai/forecast/data/overview_forecast/300000.json \
+            -o data/wakayama/overview.json
+
+      - name: Fetch Wakayama Comment TXT
         run: |
           curl -s -A "Mozilla/5.0" \
             https://www.jma.go.jp/bosai/forecaster_comment/data/comments/300000.txt \
@@ -76,7 +101,17 @@ jobs:
           import json
           from pathlib import Path
 
-          raw = Path("wakayama_raw.txt").read_bytes()
+          raw_path = Path("wakayama_raw.txt")
+          out_path = Path("data/wakayama/comment.json")
+
+          if not raw_path.exists() or raw_path.stat().st_size == 0:
+              out_path.write_text(
+                  json.dumps({"text": "コメント取得失敗"}, ensure_ascii=False, indent=2),
+                  encoding="utf-8"
+              )
+              raise SystemExit(0)
+
+          raw = raw_path.read_bytes()
 
           text = None
           for enc in ["cp932", "shift_jis", "utf-8", "euc_jp"]:
@@ -89,9 +124,14 @@ jobs:
           if text is None:
               text = raw.decode("cp932", errors="replace")
 
-          text = text.replace("\r\n", "\n").replace("\r", "\n").strip()
+          text = (
+              text.replace("\r\n", "\n")
+                  .replace("\r", "\n")
+                  .replace("\u3000", " ")
+                  .strip()
+          )
 
-          Path("data/wakayama/comment.json").write_text(
+          out_path.write_text(
               json.dumps({"text": text}, ensure_ascii=False, indent=2),
               encoding="utf-8"
           )
@@ -106,5 +146,5 @@ jobs:
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
           git add data/
-          git commit -m "update weather data $(date)" || echo "no change"
+          git commit -m "update weather data $(date '+%Y-%m-%d %H:%M:%S')" || echo "no change"
           git push
