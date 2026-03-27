@@ -190,6 +190,16 @@
       transition: background-color .2s ease;
     }
 
+    .comment-panel a {
+      color: #0b57d0;
+      text-decoration: underline;
+      word-break: break-all;
+    }
+
+    body.dark .comment-panel a {
+      color: #93c5fd;
+    }
+
     .table-wrap {
       overflow-x: auto;
       border: 1px solid var(--line);
@@ -336,7 +346,7 @@
 
     let currentLeft = "nara";
     let currentRight = "wakayama";
-    let displayMode = "pair"; // pair / single
+    let displayMode = "pair";
 
     function weatherIcon(text) {
       if (!text) return "○";
@@ -355,6 +365,23 @@
       if (/^[0-9a-fA-F]{6}$/.test(v)) return `#${v}`;
       if (/^[0-9a-fA-F]{3}$/.test(v)) return `#${v}`;
       return v;
+    }
+
+    function escapeHtml(text) {
+      return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function linkifyText(text) {
+      const escaped = escapeHtml(text);
+      const urlRegex = /(https?:\/\/[^\s<]+)/g;
+      return escaped.replace(urlRegex, url => {
+        return `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+      }).replace(/\n/g, "<br>");
     }
 
     function populateSelectors() {
@@ -577,8 +604,8 @@
         for (let i = 0; i < len; i++) {
           html += `
             <td>
-              <div>${winds[i] || "-"}</div>
-              <div class="sub">波: ${waves[i] || "-"}</div>
+              <div>風: ${winds[i] || "-"}</div>
+              <div>波: ${waves[i] || "-"}</div>
             </td>
           `;
         }
@@ -603,7 +630,7 @@
         return;
       }
 
-      let html = `<table><tr><th>時点</th>`;
+      let html = `<table><tr><th>地域</th>`;
       (popSeries.timeDefines || []).forEach(t => {
         const d = new Date(t);
         html += `<th>${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}時</th>`;
@@ -640,51 +667,34 @@
         return;
       }
 
-      let maxPairs = [];
-      let minPairs = [];
+      const headers = [];
+      const values = [];
 
       for (let i = 0; i < temps.length; i++) {
-        const val = temps[i];
         const t = times[i] ? new Date(times[i]) : null;
-        const label = t
+        const dateLabel = t
           ? `${String(t.getMonth() + 1).padStart(2, "0")}/${String(t.getDate()).padStart(2, "0")}`
-          : `時点${i + 1}`;
+          : `日${i + 1}`;
 
-        if (t && t.getHours() >= 12) {
-          maxPairs.push({ label, value: val });
-        } else {
-          minPairs.push({ label, value: val });
-        }
+        const isMax = t ? t.getHours() >= 12 : i % 2 === 1;
+        headers.push(`${dateLabel} ${isMax ? "最高気温" : "最低気温"}`);
+        values.push({
+          value: temps[i],
+          cls: isMax ? "temp-max" : "temp-min"
+        });
       }
 
-      if (!maxPairs.length && temps.length >= 2) {
-        maxPairs = temps.filter((_, i) => i % 2 === 1).map((v, i) => ({ label: `日${i + 1}`, value: v }));
-      }
-      if (!minPairs.length && temps.length >= 1) {
-        minPairs = temps.filter((_, i) => i % 2 === 0).map((v, i) => ({ label: `日${i + 1}`, value: v }));
-      }
+      let html = `<table><tr><th>地域</th>`;
+      headers.forEach(h => {
+        html += `<th>${h}</th>`;
+      });
+      html += `</tr><tr><th>${area.area?.name || regionName}</th>`;
 
-      const colCount = Math.max(maxPairs.length, minPairs.length);
+      values.forEach(v => {
+        html += `<td class="${v.cls}">${v.value ?? "-"}℃</td>`;
+      });
 
-      let html = `<table><tr><th>区分</th>`;
-      for (let i = 0; i < colCount; i++) {
-        const label = maxPairs[i]?.label || minPairs[i]?.label || `日${i + 1}`;
-        html += `<th>${label}</th>`;
-      }
-      html += `</tr>`;
-
-      html += `<tr><th>最高気温</th>`;
-      for (let i = 0; i < colCount; i++) {
-        html += `<td class="temp-max">${maxPairs[i]?.value ?? "-" }℃</td>`;
-      }
-      html += `</tr>`;
-
-      html += `<tr><th>最低気温</th>`;
-      for (let i = 0; i < colCount; i++) {
-        html += `<td class="temp-min">${minPairs[i]?.value ?? "-" }℃</td>`;
-      }
       html += `</tr></table>`;
-
       el.innerHTML = html;
     }
 
@@ -711,7 +721,9 @@
         return;
       }
 
-      el.textContent = data.text || "コメントなし";
+      const text = data.text || "コメントなし";
+      el.innerHTML = linkifyText(text);
+
       const bg = normalizeBgColor(data.bgcolor);
       if (bg) el.style.backgroundColor = bg;
     }
