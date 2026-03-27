@@ -188,15 +188,33 @@
 
     .comment-panel {
       transition: background-color .2s ease;
+      white-space: normal;
     }
 
-    .comment-panel a {
+    .comment-text {
+      white-space: pre-wrap;
+      margin-bottom: 10px;
+    }
+
+    .comment-links {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px dashed var(--line);
+    }
+
+    .comment-links ul {
+      margin: 6px 0 0;
+      padding-left: 18px;
+    }
+
+    .comment-links a {
       color: #0b57d0;
       text-decoration: underline;
       word-break: break-all;
+      pointer-events: auto;
     }
 
-    body.dark .comment-panel a {
+    body.dark .comment-links a {
       color: #93c5fd;
     }
 
@@ -376,14 +394,6 @@
         .replace(/'/g, "&#39;");
     }
 
-    function linkifyText(text) {
-      const escaped = escapeHtml(text);
-      const urlRegex = /(https?:\/\/[^\s<]+)/g;
-      return escaped.replace(urlRegex, url => {
-        return `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
-      }).replace(/\n/g, "<br>");
-    }
-
     function populateSelectors() {
       const left = document.getElementById("leftSelect");
       const right = document.getElementById("rightSelect");
@@ -527,21 +537,9 @@
       return await res.json();
     }
 
-    function findSeries(data, propName) {
-      if (!Array.isArray(data) || !data[0]?.timeSeries) return null;
-      return data[0].timeSeries.find(ts =>
-        Array.isArray(ts.areas) &&
-        ts.areas.some(a => Array.isArray(a[propName]))
-      ) || null;
-    }
-
-    function findBestArea(areas, regionName) {
-      if (!Array.isArray(areas) || areas.length === 0) return null;
-      return (
-        areas.find(a => a.area?.name === regionName) ||
-        areas.find(a => regionName.includes(a.area?.name || "")) ||
-        areas[0]
-      );
+    function findSeries(data, predicate) {
+      if (!Array.isArray(data) || !data[1]?.timeSeries) return null;
+      return data[1].timeSeries.find(predicate) || null;
     }
 
     function buildHeaderCells(timeDefines) {
@@ -616,85 +614,68 @@
       el.innerHTML = html;
     }
 
-    function renderPopTable(code, regionName, data) {
+    function renderPopTable(code, data) {
       const el = document.getElementById(`pop-${code}`);
-      const popSeries = findSeries(data, "pops");
-      if (!popSeries) {
+      if (!Array.isArray(data) || !data[0]?.timeSeries?.[1]) {
         el.innerHTML = `<div class="panel muted">降水確率データなし</div>`;
         return;
       }
 
-      const area = findBestArea(popSeries.areas, regionName);
-      if (!area) {
-        el.innerHTML = `<div class="panel muted">降水確率データなし</div>`;
-        return;
-      }
+      const ts = data[0].timeSeries[1];
+      let html = `<table><tr><th>地域</th>${buildHeaderCells(ts.timeDefines)}</tr>`;
 
-      let html = `<table><tr><th>地域</th>`;
-      (popSeries.timeDefines || []).forEach(t => {
-        const d = new Date(t);
-        html += `<th>${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}時</th>`;
-      });
-      html += `</tr><tr><th>${area.area?.name || regionName}</th>`;
-
-      (area.pops || []).forEach(v => {
-        html += `<td>${v || "-"}%</td>`;
+      ts.areas.forEach(area => {
+        html += `<tr><th>${area.area?.name || "-"}</th>`;
+        (area.pops || []).forEach(v => {
+          html += `<td>${v || "-"}%</td>`;
+        });
+        html += `</tr>`;
       });
 
-      html += `</tr></table>`;
+      html += `</table>`;
       el.innerHTML = html;
     }
 
-    function renderTempTable(code, regionName, data) {
+    function renderTempTable(code, data) {
       const el = document.getElementById(`temp-${code}`);
-      const tempSeries = findSeries(data, "temps");
+
+      const tempSeries = findSeries(
+        data,
+        ts => Array.isArray(ts.areas) && ts.areas.some(a => Array.isArray(a.tempsMin) || Array.isArray(a.tempsMax))
+      );
+
       if (!tempSeries) {
         el.innerHTML = `<div class="panel muted">気温データなし</div>`;
         return;
       }
 
-      const area = findBestArea(tempSeries.areas, regionName);
-      if (!area) {
-        el.innerHTML = `<div class="panel muted">気温データなし</div>`;
-        return;
-      }
+      const dates = tempSeries.timeDefines || [];
+      const areas = tempSeries.areas || [];
 
-      const times = tempSeries.timeDefines || [];
-      const temps = area.temps || [];
-
-      if (!temps.length) {
-        el.innerHTML = `<div class="panel muted">気温データなし</div>`;
-        return;
-      }
-
-      const headers = [];
-      const values = [];
-
-      for (let i = 0; i < temps.length; i++) {
-        const t = times[i] ? new Date(times[i]) : null;
-        const dateLabel = t
-          ? `${String(t.getMonth() + 1).padStart(2, "0")}/${String(t.getDate()).padStart(2, "0")}`
-          : `日${i + 1}`;
-
-        const isMax = t ? t.getHours() >= 12 : i % 2 === 1;
-        headers.push(`${dateLabel} ${isMax ? "最高気温" : "最低気温"}`);
-        values.push({
-          value: temps[i],
-          cls: isMax ? "temp-max" : "temp-min"
-        });
-      }
-
-      let html = `<table><tr><th>地域</th>`;
-      headers.forEach(h => {
-        html += `<th>${h}</th>`;
-      });
-      html += `</tr><tr><th>${area.area?.name || regionName}</th>`;
-
-      values.forEach(v => {
-        html += `<td class="${v.cls}">${v.value ?? "-"}℃</td>`;
+      let headers = `<th>地域</th>`;
+      dates.forEach(d => {
+        const date = new Date(d);
+        const label = `${String(date.getMonth() + 1).padStart(2, "0")}/${String(date.getDate()).padStart(2, "0")}`;
+        headers += `<th>${label} 最低気温</th><th>${label} 最高気温</th>`;
       });
 
-      html += `</tr></table>`;
+      let html = `<table><tr>${headers}</tr>`;
+
+      areas.forEach(area => {
+        html += `<tr><th>${area.area?.name || "-"}</th>`;
+
+        const mins = area.tempsMin || [];
+        const maxs = area.tempsMax || [];
+
+        for (let i = 0; i < dates.length; i++) {
+          html += `<td class="temp-min">${mins[i] ?? "-"}${mins[i] !== undefined && mins[i] !== "" ? "℃" : ""}</td>`;
+          html += `<td class="temp-max">${maxs[i] ?? "-"}${maxs[i] !== undefined && maxs[i] !== "" ? "℃" : ""}</td>`;
+        }
+
+        html += `</tr>`;
+      });
+
+      html += `</table>`;
       el.innerHTML = html;
     }
 
@@ -721,8 +702,27 @@
         return;
       }
 
-      const text = data.text || "コメントなし";
-      el.innerHTML = linkifyText(text);
+      const textHtml = `<div class="comment-text">${escapeHtml(data.text || "コメントなし").replace(/\n/g, "<br>")}</div>`;
+
+      let linksHtml = "";
+      if (Array.isArray(data.links) && data.links.length) {
+        linksHtml = `
+          <div class="comment-links">
+            <strong>関連リンク</strong>
+            <ul>
+              ${data.links.map(link => `
+                <li>
+                  <a href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer">
+                    ${escapeHtml(link.label)}
+                  </a>
+                </li>
+              `).join("")}
+            </ul>
+          </div>
+        `;
+      }
+
+      el.innerHTML = textHtml + linksHtml;
 
       const bg = normalizeBgColor(data.bgcolor);
       if (bg) el.style.backgroundColor = bg;
@@ -740,8 +740,8 @@
 
         renderWeatherTable(region.code, weather);
         renderWindWaveTable(region.code, weather);
-        renderPopTable(region.code, region.name, weather);
-        renderTempTable(region.code, region.name, weather);
+        renderPopTable(region.code, weather);
+        renderTempTable(region.code, weather);
         renderOverview(region.code, overview);
         renderComment(region.code, comment);
       } catch (err) {
