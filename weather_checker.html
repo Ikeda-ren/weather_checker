@@ -366,12 +366,62 @@
     let currentRight = "wakayama";
     let displayMode = "pair";
 
-    function weatherIcon(text) {
-      if (!text) return "○";
+    function jmaLikeIcon(code, text = "") {
+      const map = {
+        "100": "☀",
+        "101": "☀☁",
+        "102": "☀☔",
+        "103": "☀☃",
+        "104": "☀⛄",
+        "110": "☀☁",
+        "111": "☀☁",
+        "112": "☀☔",
+        "113": "☀☔",
+        "114": "☀⛄",
+        "115": "☀⛄",
+        "200": "☁",
+        "201": "☁☀",
+        "202": "☁☔",
+        "203": "☁☔",
+        "204": "☁☃",
+        "205": "☁⛄",
+        "206": "☁☔",
+        "207": "☁☃",
+        "208": "☁⛄",
+        "209": "☁⚡",
+        "210": "☁☀",
+        "211": "☁☀",
+        "212": "☁☔",
+        "213": "☁☔",
+        "214": "☁⛄",
+        "215": "☁⛄",
+        "300": "☔",
+        "301": "☔☀",
+        "302": "☔☁",
+        "303": "☔☁",
+        "304": "☔⛄",
+        "306": "☔",
+        "308": "⛈",
+        "309": "☔⛄",
+        "311": "☔☀",
+        "313": "☔☁",
+        "314": "☔☁",
+        "315": "☔⛄",
+        "400": "☃",
+        "401": "☃☀",
+        "402": "☃☁",
+        "403": "☃☁",
+        "405": "☃",
+        "406": "☃☔",
+        "407": "☃☔",
+      };
+
+      if (code && map[code]) return map[code];
+
       if (text.includes("晴")) return "☀";
       if (text.includes("曇")) return "☁";
       if (text.includes("雨")) return "☔";
-      if (text.includes("雪")) return "❄";
+      if (text.includes("雪")) return "☃";
       if (text.includes("雷")) return "⚡";
       return "○";
     }
@@ -567,15 +617,21 @@
       let html = `<table><tr><th class="region-head">地域</th>${buildHeaderCells(ts.timeDefines)}</tr>`;
 
       ts.areas.forEach(area => {
+        const weathers = area.weathers || [];
+        const weatherCodes = area.weatherCodes || [];
+
         html += `<tr><th class="region-head">${area.area?.name ?? "-"}</th>`;
-        (area.weathers || []).forEach(w => {
+
+        weathers.forEach((w, i) => {
+          const icon = jmaLikeIcon(weatherCodes[i], w);
           html += `
             <td class="weather-cell">
-              <div class="weather-icon">${weatherIcon(w)}</div>
+              <div class="weather-icon">${icon}</div>
               <div>${w || "-"}</div>
             </td>
           `;
         });
+
         html += `</tr>`;
       });
 
@@ -661,35 +717,32 @@
         return;
       }
 
-      const groupedHeaders = [];
-      const maxCols = Math.min(times.length, 4); // 明日まで想定で最大4枠くらい
+      const labels = ["今日最低", "今日最高", "明日最低", "明日最高"];
 
-      for (let i = 0; i < maxCols; i++) {
-        const t = new Date(times[i]);
-        const label = `${String(t.getMonth() + 1).padStart(2, "0")}/${String(t.getDate()).padStart(2, "0")}`;
-        const isMax = t.getHours() >= 12;
-        groupedHeaders.push({
-          label: `${label} ${isMax ? "最高気温" : "最低気温"}`,
-          cls: isMax ? "temp-max" : "temp-min",
-          index: i
-        });
-      }
-
-      let html = `<table><tr><th>地域</th>`;
-      groupedHeaders.forEach(h => {
-        html += `<th>${h.label}</th>`;
-      });
-      html += `</tr>`;
+      let html = `<table>
+        <tr>
+          <th>地域</th>
+          <th>今日最低</th>
+          <th>今日最高</th>
+          <th>明日最低</th>
+          <th>明日最高</th>
+        </tr>`;
 
       areas.forEach(area => {
-        html += `<tr><th>${area.area?.name || "-"}</th>`;
         const temps = area.temps || [];
 
-        groupedHeaders.forEach(h => {
-          const value = temps[h.index];
-          html += `<td class="${h.cls}">${value ?? "-"}${value !== undefined && value !== "" ? "℃" : ""}</td>`;
-        });
+        const values = [
+          temps[0] ?? "-",
+          temps[1] ?? "-",
+          temps[2] ?? "-",
+          temps[3] ?? "-"
+        ];
 
+        html += `<tr><th>${area.area?.name || "-"}</th>`;
+        html += `<td class="temp-min">${values[0] !== "-" ? values[0] + "℃" : "-"}</td>`;
+        html += `<td class="temp-max">${values[1] !== "-" ? values[1] + "℃" : "-"}</td>`;
+        html += `<td class="temp-min">${values[2] !== "-" ? values[2] + "℃" : "-"}</td>`;
+        html += `<td class="temp-max">${values[3] !== "-" ? values[3] + "℃" : "-"}</td>`;
         html += `</tr>`;
       });
 
