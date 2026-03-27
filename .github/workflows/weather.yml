@@ -31,6 +31,11 @@ jobs:
           curl -s https://www.jma.go.jp/bosai/forecast/data/overview_forecast/290000.json \
             -o data/nara/overview.json
 
+      - name: Fetch Nara Warning
+        run: |
+          curl -s https://www.jma.go.jp/bosai/warning/data/warning/290000.json \
+            -o data/nara/warning.json
+
       - name: Fetch Nara Comment TXT
         run: |
           curl -s -A "Mozilla/5.0" \
@@ -40,7 +45,7 @@ jobs:
       - name: Convert Nara Comment to JSON
         run: |
           python3 - <<'PY'
-          import json
+          import json, re, html
           from pathlib import Path
 
           raw_path = Path("nara_raw.txt")
@@ -66,12 +71,54 @@ jobs:
           if text is None:
               text = raw.decode("cp932", errors="replace")
 
-          text = (
-              text.replace("\r\n", "\n")
-                  .replace("\r", "\n")
-                  .replace("\u3000", " ")
-                  .strip()
-          )
+          text = text.replace("\r\n", "\n").replace("\r", "\n").strip()
+
+          # HTMLっぽい内容が混ざった場合の除去
+          if "<" in text and ">" in text:
+              text = re.sub(r'(?is)<script.*?>.*?</script>', '', text)
+              text = re.sub(r'(?is)<style.*?>.*?</style>', '', text)
+              text = re.sub(r'(?is)<[^>]+>', '\n', text)
+              text = html.unescape(text)
+
+          lines = []
+          for line in text.split("\n"):
+              s = line.strip()
+              if not s:
+                  lines.append("")
+                  continue
+              # HTML残骸を除去
+              if s.startswith("<") or s.startswith("</"):
+                  continue
+              if s.lower().startswith("<!doctype"):
+                  continue
+              if s.lower().startswith("html"):
+                  continue
+              if s.lower().startswith("body"):
+                  continue
+              lines.append(s)
+
+          text = "\n".join(lines)
+
+          # URL/リンク案内以降は削る
+          stop_markers = [
+              "〖主な防災情報のURL/リンク〗",
+              "主な防災情報のURL/リンク",
+              "背景色などについて",
+              "土砂災害警戒情報・警報・注意報",
+              "キキクル",
+              "雨雲の動き",
+              "今後の雨",
+              "今後の雪",
+          ]
+          cut_pos = len(text)
+          for marker in stop_markers:
+              pos = text.find(marker)
+              if pos != -1:
+                  cut_pos = min(cut_pos, pos)
+          text = text[:cut_pos].strip()
+
+          # 余分な空行を圧縮
+          text = re.sub(r'\n{3,}', '\n\n', text).strip()
 
           out_path.write_text(
               json.dumps({"text": text}, ensure_ascii=False, indent=2),
@@ -89,6 +136,11 @@ jobs:
           curl -s https://www.jma.go.jp/bosai/forecast/data/overview_forecast/300000.json \
             -o data/wakayama/overview.json
 
+      - name: Fetch Wakayama Warning
+        run: |
+          curl -s https://www.jma.go.jp/bosai/warning/data/warning/300000.json \
+            -o data/wakayama/warning.json
+
       - name: Fetch Wakayama Comment TXT
         run: |
           curl -s -A "Mozilla/5.0" \
@@ -98,7 +150,7 @@ jobs:
       - name: Convert Wakayama Comment to JSON
         run: |
           python3 - <<'PY'
-          import json
+          import json, re, html
           from pathlib import Path
 
           raw_path = Path("wakayama_raw.txt")
@@ -124,12 +176,50 @@ jobs:
           if text is None:
               text = raw.decode("cp932", errors="replace")
 
-          text = (
-              text.replace("\r\n", "\n")
-                  .replace("\r", "\n")
-                  .replace("\u3000", " ")
-                  .strip()
-          )
+          text = text.replace("\r\n", "\n").replace("\r", "\n").strip()
+
+          if "<" in text and ">" in text:
+              text = re.sub(r'(?is)<script.*?>.*?</script>', '', text)
+              text = re.sub(r'(?is)<style.*?>.*?</style>', '', text)
+              text = re.sub(r'(?is)<[^>]+>', '\n', text)
+              text = html.unescape(text)
+
+          lines = []
+          for line in text.split("\n"):
+              s = line.strip()
+              if not s:
+                  lines.append("")
+                  continue
+              if s.startswith("<") or s.startswith("</"):
+                  continue
+              if s.lower().startswith("<!doctype"):
+                  continue
+              if s.lower().startswith("html"):
+                  continue
+              if s.lower().startswith("body"):
+                  continue
+              lines.append(s)
+
+          text = "\n".join(lines)
+
+          stop_markers = [
+              "〖主な防災情報のURL/リンク〗",
+              "主な防災情報のURL/リンク",
+              "背景色などについて",
+              "土砂災害警戒情報・警報・注意報",
+              "キキクル",
+              "雨雲の動き",
+              "今後の雨",
+              "今後の雪",
+          ]
+          cut_pos = len(text)
+          for marker in stop_markers:
+              pos = text.find(marker)
+              if pos != -1:
+                  cut_pos = min(cut_pos, pos)
+          text = text[:cut_pos].strip()
+
+          text = re.sub(r'\n{3,}', '\n\n', text).strip()
 
           out_path.write_text(
               json.dumps({"text": text}, ensure_ascii=False, indent=2),
