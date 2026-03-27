@@ -1,269 +1,415 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>天気ダッシュボード Pro</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>天気ダッシュボード Pro</title>
 
-<style>
-:root {
-  --bg: linear-gradient(135deg, #4facfe, #00f2fe);
-  --card: #fff;
-  --text: #333;
-}
-
-body.dark {
-  --bg: #1e1e1e;
-  --card: #2c2c2c;
-  --text: #eee;
-}
-
-body {
-  margin: 0;
-  font-family: "Segoe UI", "Yu Gothic", sans-serif;
-  background: var(--bg);
-  color: var(--text);
-}
-
-/* ヘッダー */
-header {
-  position: sticky;
-  top: 0;
-  text-align: center;
-  padding: 1rem;
-  background: rgba(0,0,0,0.2);
-  color: white;
-  backdrop-filter: blur(10px);
-}
-
-button {
-  margin-top: 5px;
-  padding: 5px 10px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-/* グリッド */
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-  gap: 1rem;
-  padding: 1rem;
-}
-
-/* カード */
-.card {
-  background: var(--card);
-  border-radius: 16px;
-  padding: 1rem;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-}
-
-/* セクション */
-.section {
-  margin-top: 1rem;
-}
-
-.text {
-  background: rgba(0,0,0,0.05);
-  padding: 0.5rem;
-  border-radius: 8px;
-  white-space: pre-wrap;
-}
-
-/* テーブル */
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.85rem;
-}
-
-th, td {
-  padding: 5px;
-  border-bottom: 1px solid #ccc;
-}
-
-.today { background: #ffe082; }
-.tomorrow { background: #bbdefb; }
-
-/* 警報 */
-.alert-high { border-left: 6px solid red; }
-.alert-mid { border-left: 6px solid orange; }
-</style>
-</head>
-
-<body>
-
-<header>
-  <h1>天気ダッシュボード Pro</h1>
-  <div id="status">読み込み中...</div>
-  <button onclick="toggleDark()">ダークモード</button>
-</header>
-
-<div class="grid" id="areas"></div>
-
-<script>
-const regions = [
-  { code: "290000", name: "奈良県", path: "data/nara" },
-  { code: "300000", name: "和歌山県", path: "data/wakayama" }
-];
-
-// 🌤 アイコン
-function icon(w){
-  if (w.includes("晴")) return "☀️";
-  if (w.includes("曇")) return "☁️";
-  if (w.includes("雨")) return "🌧";
-  if (w.includes("雪")) return "❄️";
-  return "🌈";
-}
-
-// UI
-function createCard(r){
-  const el = document.createElement("div");
-  el.className = "card";
-  el.id = "card-" + r.code;
-
-  el.innerHTML = `
-    <h2>${r.name}</h2>
-    <div id="time-${r.code}"></div>
-
-    <div class="section">
-      <h3>天気予報</h3>
-      <div id="forecast-${r.code}"></div>
-    </div>
-
-    <div class="section">
-      <h3>概況</h3>
-      <div id="overview-${r.code}" class="text"></div>
-    </div>
-
-    <div class="section">
-      <h3>警報</h3>
-      <div id="comment-${r.code}" class="text"></div>
-    </div>
-  `;
-  return el;
-}
-
-// 予報
-function renderForecast(code, data){
-  const el = document.getElementById("forecast-"+code);
-  const ts = data[0].timeSeries[0];
-
-  const today = new Date();
-  const tomorrow = new Date();
-  tomorrow.setDate(today.getDate()+1);
-
-  let html = "<table><tr><th>日付</th>";
-
-  ts.timeDefines.forEach(d=>{
-    const date = new Date(d);
-    let cls="";
-    if(date.toDateString()===today.toDateString()) cls="today";
-    if(date.toDateString()===tomorrow.toDateString()) cls="tomorrow";
-
-    html += `<th class="${cls}">${date.getMonth()+1}/${date.getDate()}</th>`;
-  });
-
-  html+="</tr>";
-
-  ts.areas.forEach(a=>{
-    html += `<tr><th>${a.area.name}</th>`;
-    a.weathers.forEach(w=>{
-      html += `<td>${icon(w)}<br>${w}</td>`;
-    });
-    html += "</tr>";
-  });
-
-  html+="</table>";
-  el.innerHTML = html;
-}
-
-// 概況
-function renderOverview(code, data){
-  document.getElementById("overview-"+code).textContent = data.text || "なし";
-
-  if(data.reportDatetime){
-    document.getElementById("time-"+code).textContent =
-      "更新: " + new Date(data.reportDatetime).toLocaleString();
-  }
-}
-
-// 警報
-function renderComment(code, data){
-  const el = document.getElementById("comment-"+code);
-  const card = document.getElementById("card-"+code);
-
-  if (!data || !data[0]) return;
-
-  let text="";
-
-  data[0].areas.forEach(a=>{
-    const list = a.warnings
-      .filter(w=>w.status!=="なし")
-      .map(w=>w.name);
-
-    if(list.length){
-      text += `${a.area.name}: ${list.join(", ")}\n`;
+  <style>
+    :root {
+      --bg: linear-gradient(135deg, #4facfe, #00f2fe);
+      --card: #ffffff;
+      --card-sub: #f7faff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --line: #dbe4f0;
+      --accent: #2563eb;
+      --today: #ffe082;
+      --tomorrow: #bbdefb;
+      --shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
     }
-  });
 
-  el.textContent = text || "なし";
+    body.dark {
+      --bg: linear-gradient(135deg, #0f172a, #1e293b);
+      --card: #1f2937;
+      --card-sub: #111827;
+      --text: #f3f4f6;
+      --muted: #cbd5e1;
+      --line: #334155;
+      --accent: #60a5fa;
+      --today: #7c5c00;
+      --tomorrow: #1d4ed8;
+      --shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+    }
 
-  if(text.includes("警報")){
-    card.classList.add("alert-high");
-  } else if(text.includes("注意報")){
-    card.classList.add("alert-mid");
-  }
-}
+    * {
+      box-sizing: border-box;
+    }
 
-// 取得
-async function fetchRegion(r){
-  try{
-    const [f,o,c] = await Promise.all([
-      fetch(`${r.path}/weather.json`).then(r=>r.json()),
-      fetch(`${r.path}/overview.json`).then(r=>r.json()),
-      fetch(`${r.path}/comment.json`).then(r=>r.json())
-    ]);
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Yu Gothic UI", Meiryo, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
 
-    renderForecast(r.code,f);
-    renderOverview(r.code,o);
-    renderComment(r.code,c);
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      padding: 16px 20px;
+      text-align: center;
+      color: white;
+      background: rgba(0, 0, 0, 0.18);
+      backdrop-filter: blur(10px);
+    }
 
-  }catch(e){
-    console.error(e);
-    document.getElementById("status").textContent="取得失敗";
-  }
-}
+    header h1 {
+      margin: 0 0 6px;
+      font-size: 1.8rem;
+    }
 
-// 初期化
-async function init(){
-  document.getElementById("status").textContent="更新中...";
-  const areas = document.getElementById("areas");
-  areas.innerHTML="";
+    #status {
+      font-size: 0.92rem;
+      opacity: 0.95;
+    }
 
-  regions.forEach(r=>areas.appendChild(createCard(r)));
+    .toolbar {
+      margin-top: 10px;
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
 
-  await Promise.all(regions.map(fetchRegion));
+    .toolbar button {
+      border: none;
+      border-radius: 999px;
+      padding: 8px 14px;
+      cursor: pointer;
+      background: white;
+      color: #1f2937;
+      font-weight: 700;
+      box-shadow: 0 2px 8px rgba(0,0,0,.12);
+    }
 
-  document.getElementById("status").textContent =
-    "最終更新: "+new Date().toLocaleTimeString();
-}
+    .page {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 18px;
+    }
 
-setInterval(init,300000);
-window.onload=init;
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+      gap: 18px;
+    }
 
-// ダークモード
-function toggleDark(){
-  document.body.classList.toggle("dark");
-}
+    .card {
+      background: var(--card);
+      border-radius: 20px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(255,255,255,.12);
+    }
 
-// PWA（簡易）
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('sw.js');
-}
-</script>
+    .card h2 {
+      margin: 0 0 6px;
+      font-size: 1.4rem;
+    }
 
+    .time {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 12px;
+    }
+
+    .section {
+      margin-top: 16px;
+    }
+
+    .section h3 {
+      margin: 0 0 8px;
+      padding-left: 10px;
+      border-left: 4px solid var(--accent);
+      font-size: 1rem;
+    }
+
+    .panel {
+      background: var(--card-sub);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--card-sub);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 520px;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--line);
+      text-align: center;
+      vertical-align: top;
+    }
+
+    th {
+      background: rgba(37, 99, 235, 0.08);
+      font-weight: 700;
+    }
+
+    tr:last-child td,
+    tr:last-child th {
+      border-bottom: none;
+    }
+
+    .today {
+      background: var(--today) !important;
+    }
+
+    .tomorrow {
+      background: var(--tomorrow) !important;
+      color: inherit;
+    }
+
+    .weather-cell {
+      line-height: 1.5;
+    }
+
+    .weather-icon {
+      display: inline-block;
+      font-size: 1.25rem;
+      margin-bottom: 4px;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .error {
+      color: #b91c1c;
+      font-weight: 700;
+    }
+
+    .footer-note {
+      margin-top: 16px;
+      text-align: center;
+      color: white;
+      font-size: 0.85rem;
+      opacity: 0.9;
+    }
+
+    @media (max-width: 768px) {
+      header h1 {
+        font-size: 1.4rem;
+      }
+
+      .page {
+        padding: 12px;
+      }
+
+      .card {
+        padding: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>天気ダッシュボード Pro</h1>
+    <div id="status">読み込み中...</div>
+    <div class="toolbar">
+      <button type="button" onclick="toggleDarkMode()">ダークモード切替</button>
+      <button type="button" onclick="init()">今すぐ更新</button>
+    </div>
+  </header>
+
+  <main class="page">
+    <div class="grid" id="areas"></div>
+    <div class="footer-note">
+      データ取得元：気象庁公開データ / GitHub Pages
+    </div>
+  </main>
+
+  <script>
+    const regions = [
+      { code: "290000", name: "奈良県", path: "data/nara" },
+      { code: "300000", name: "和歌山県", path: "data/wakayama" }
+    ];
+
+    function weatherIcon(text) {
+      if (!text) return "🌈";
+      if (text.includes("晴")) return "☀️";
+      if (text.includes("曇")) return "☁️";
+      if (text.includes("雨")) return "🌧️";
+      if (text.includes("雪")) return "❄️";
+      if (text.includes("雷")) return "⛈️";
+      return "🌈";
+    }
+
+    function createCard(region) {
+      const el = document.createElement("div");
+      el.className = "card";
+      el.id = `card-${region.code}`;
+
+      el.innerHTML = `
+        <h2>${region.name}</h2>
+        <div class="time" id="time-${region.code}">更新時刻: -</div>
+
+        <section class="section">
+          <h3>天気予報</h3>
+          <div id="forecast-${region.code}" class="table-wrap">
+            <div class="panel muted">読み込み中...</div>
+          </div>
+        </section>
+
+        <section class="section">
+          <h3>天気概況</h3>
+          <div id="overview-${region.code}" class="panel muted">読み込み中...</div>
+        </section>
+
+        <section class="section">
+          <h3>気象台からのコメント</h3>
+          <div id="comment-${region.code}" class="panel muted">読み込み中...</div>
+        </section>
+      `;
+
+      return el;
+    }
+
+    async function fetchJson(url) {
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${url}`);
+      }
+      return await res.json();
+    }
+
+    function renderForecast(code, data) {
+      const el = document.getElementById(`forecast-${code}`);
+
+      if (!Array.isArray(data) || !data[0]?.timeSeries?.[0]) {
+        el.innerHTML = `<div class="panel error">天気予報データを読み込めませんでした。</div>`;
+        return;
+      }
+
+      const ts = data[0].timeSeries[0];
+      const today = new Date();
+      const tomorrow = new Date();
+      tomorrow.setDate(today.getDate() + 1);
+
+      let html = "<table><tr><th>地域</th>";
+
+      ts.timeDefines.forEach(d => {
+        const date = new Date(d);
+        let cls = "";
+        if (date.toDateString() === today.toDateString()) cls = "today";
+        else if (date.toDateString() === tomorrow.toDateString()) cls = "tomorrow";
+
+        html += `<th class="${cls}">${date.getMonth() + 1}/${date.getDate()}</th>`;
+      });
+
+      html += "</tr>";
+
+      ts.areas.forEach(area => {
+        html += `<tr><th>${area.area?.name ?? "-"}</th>`;
+
+        (area.weathers || []).forEach(w => {
+          html += `
+            <td class="weather-cell">
+              <div class="weather-icon">${weatherIcon(w)}</div>
+              <div>${w || "-"}</div>
+            </td>
+          `;
+        });
+
+        html += "</tr>";
+      });
+
+      html += "</table>";
+      el.innerHTML = html;
+    }
+
+    function renderOverview(code, data) {
+      const el = document.getElementById(`overview-${code}`);
+      const timeEl = document.getElementById(`time-${code}`);
+
+      if (!data || typeof data !== "object") {
+        el.textContent = "天気概況データを読み込めませんでした。";
+        return;
+      }
+
+      el.textContent = data.text || "データなし";
+
+      if (data.reportDatetime) {
+        timeEl.textContent = "更新時刻: " + new Date(data.reportDatetime).toLocaleString("ja-JP");
+      }
+    }
+
+    function renderComment(code, data) {
+      const el = document.getElementById(`comment-${code}`);
+
+      if (!data || typeof data !== "object") {
+        el.textContent = "コメントデータを読み込めませんでした。";
+        return;
+      }
+
+      const text = data.text || "コメントなし";
+      el.textContent = text;
+    }
+
+    async function fetchRegion(region) {
+      try {
+        const [weather, overview, comment] = await Promise.all([
+          fetchJson(`${region.path}/weather.json`),
+          fetchJson(`${region.path}/overview.json`),
+          fetchJson(`${region.path}/comment.json`)
+        ]);
+
+        renderForecast(region.code, weather);
+        renderOverview(region.code, overview);
+        renderComment(region.code, comment);
+      } catch (err) {
+        console.error(region.name, err);
+
+        document.getElementById(`forecast-${region.code}`).innerHTML =
+          `<div class="panel error">天気予報の取得に失敗しました。</div>`;
+
+        document.getElementById(`overview-${region.code}`).textContent =
+          "天気概況の取得に失敗しました。";
+
+        document.getElementById(`comment-${region.code}`).textContent =
+          "コメントの取得に失敗しました。";
+      }
+    }
+
+    async function init() {
+      const status = document.getElementById("status");
+      const areas = document.getElementById("areas");
+
+      status.textContent = "更新中...";
+      areas.innerHTML = "";
+
+      regions.forEach(region => {
+        areas.appendChild(createCard(region));
+      });
+
+      await Promise.all(regions.map(fetchRegion));
+
+      status.textContent = "最終更新: " + new Date().toLocaleString("ja-JP");
+    }
+
+    function toggleDarkMode() {
+      document.body.classList.toggle("dark");
+    }
+
+    window.addEventListener("load", init);
+
+    // 5分ごと更新
+    setInterval(init, 300000);
+  </script>
 </body>
 </html>
