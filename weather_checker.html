@@ -2,39 +2,43 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>奈良県 / 和歌山県 天気</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>天気ダッシュボード</title>
 
 <style>
 body {
-  font-family: "Segoe UI", sans-serif;
-  background: linear-gradient(135deg, #e0ecff, #f7f9fc);
   margin: 0;
-  padding: 20px;
+  font-family: "Segoe UI", "Yu Gothic", sans-serif;
+  background: linear-gradient(135deg, #4facfe, #00f2fe);
+  color: #333;
 }
 
-h1 {
+/* ヘッダー */
+header {
   text-align: center;
-  margin-bottom: 5px;
+  padding: 1.5rem;
+  color: white;
 }
 
-.updated {
-  text-align: center;
-  color: #666;
-  font-size: 14px;
-  margin-bottom: 20px;
+#status {
+  font-size: 0.9rem;
+  opacity: 0.8;
 }
 
-.container {
-  display: flex;
-  gap: 20px;
+/* グリッド */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 1rem;
+  padding: 1rem;
 }
 
+/* カード */
 .card {
-  flex: 1;
   background: white;
   border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  padding: 1rem;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
   transition: 0.2s;
 }
 
@@ -42,164 +46,195 @@ h1 {
   transform: translateY(-5px);
 }
 
+/* 見出し */
 h2 {
-  margin-top: 0;
+  margin: 0 0 0.5rem;
 }
 
+/* 更新時刻 */
+.time {
+  font-size: 0.8rem;
+  color: #666;
+  margin-bottom: 0.5rem;
+}
+
+/* セクション */
 .section {
-  margin-top: 15px;
+  margin-top: 1rem;
 }
 
-.label {
-  font-weight: bold;
-  border-bottom: 2px solid #4a90e2;
-  margin-bottom: 5px;
+.section h3 {
+  margin-bottom: 0.3rem;
+  border-left: 4px solid #4facfe;
+  padding-left: 6px;
 }
 
-.value {
-  margin-top: 5px;
-  font-size: 15px;
+/* テキスト */
+.text {
+  background: #f1f5ff;
+  padding: 0.5rem;
+  border-radius: 8px;
+  white-space: pre-wrap;
+  font-size: 0.9rem;
 }
 
-.weather-icon {
-  font-size: 24px;
-  margin-right: 5px;
+/* テーブル */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
 }
 
-/* スマホ対応 */
-@media (max-width: 768px) {
-  .container {
-    flex-direction: column;
-  }
+th, td {
+  padding: 5px;
+  border-bottom: 1px solid #ddd;
+}
+
+th {
+  background: #f0f4ff;
+}
+
+/* 今日 */
+.today {
+  background: #ffe082 !important;
+}
+
+/* 警報 */
+.alert {
+  background: #ffebee;
+  border-left: 6px solid red;
 }
 </style>
 </head>
 
 <body>
 
-<h1>奈良県 / 和歌山県 天気</h1>
-<div class="updated">読み込み中...</div>
+<header>
+  <h1>天気ダッシュボード</h1>
+  <div id="status">読み込み中...</div>
+</header>
 
-<div class="container">
-
-  <!-- 奈良 -->
-  <div class="card" id="nara">
-    <h2>奈良県</h2>
-
-    <div class="section">
-      <div class="label">天気予報</div>
-      <div class="value forecast">取得中...</div>
-    </div>
-
-    <div class="section">
-      <div class="label">天気概況</div>
-      <div class="value overview">取得中...</div>
-    </div>
-
-    <div class="section">
-      <div class="label">気象コメント</div>
-      <div class="value comment">取得中...</div>
-    </div>
-  </div>
-
-  <!-- 和歌山 -->
-  <div class="card" id="wakayama">
-    <h2>和歌山県</h2>
-
-    <div class="section">
-      <div class="label">天気予報</div>
-      <div class="value forecast">取得中...</div>
-    </div>
-
-    <div class="section">
-      <div class="label">天気概況</div>
-      <div class="value overview">取得中...</div>
-    </div>
-
-    <div class="section">
-      <div class="label">気象コメント</div>
-      <div class="value comment">取得中...</div>
-    </div>
-  </div>
-
-</div>
+<div class="grid" id="areas"></div>
 
 <script>
+const regions = [
+  { code: "290000", name: "奈良県", path: "data/nara" },
+  { code: "300000", name: "和歌山県", path: "data/wakayama" }
+];
 
-// 天気アイコン
-function getWeatherIcon(text) {
-  if (text.includes("晴")) return "☀";
-  if (text.includes("曇")) return "☁";
-  if (text.includes("雨")) return "☔";
-  if (text.includes("雪")) return "❄";
-  return "🌈";
+function createCard(r){
+  const el = document.createElement("div");
+  el.className = "card";
+  el.id = "card-" + r.code;
+
+  el.innerHTML = `
+    <h2>${r.name}</h2>
+    <div class="time" id="time-${r.code}"></div>
+
+    <div class="section">
+      <h3>天気予報</h3>
+      <div id="forecast-${r.code}"></div>
+    </div>
+
+    <div class="section">
+      <h3>天気概況</h3>
+      <div id="overview-${r.code}" class="text"></div>
+    </div>
+
+    <div class="section">
+      <h3>気象警報</h3>
+      <div id="comment-${r.code}" class="text"></div>
+    </div>
+  `;
+  return el;
 }
 
-// データ取得
-async function fetchRegion(region) {
-  const base = `data/${region}`;
+function renderForecast(code, data){
+  const el = document.getElementById("forecast-" + code);
+  const ts = data[0].timeSeries[0];
 
-  try {
-    const [weather, overview, comment] = await Promise.all([
-      fetch(`${base}/weather.json`).then(r => r.json()),
-      fetch(`${base}/overview.json`).then(r => r.json()),
-      fetch(`${base}/comment.json`).then(r => r.json())
-    ]);
+  const today = new Date().getDate();
 
-    renderForecast(region, weather);
-    renderOverview(region, overview);
-    renderComment(region, comment);
+  let html = "<table><tr><th>日付</th>";
 
-  } catch (e) {
-    console.error("取得エラー:", region, e);
+  ts.timeDefines.forEach(d=>{
+    const date = new Date(d);
+    const day = date.getDate();
+    const cls = day === today ? "today" : "";
+    html += `<th class="${cls}">${date.getMonth()+1}/${day}</th>`;
+  });
+
+  html += "</tr>";
+
+  ts.areas.forEach(a=>{
+    html += `<tr><th>${a.area.name}</th>`;
+    a.weathers.forEach(w=>{
+      html += `<td>${w}</td>`;
+    });
+    html += "</tr>";
+  });
+
+  html += "</table>";
+  el.innerHTML = html;
+}
+
+function renderOverview(code, data){
+  document.getElementById("overview-" + code).textContent = data.text || "なし";
+
+  if(data.reportDatetime){
+    document.getElementById("time-" + code).textContent =
+      "更新: " + new Date(data.reportDatetime).toLocaleString();
   }
 }
 
-// 天気予報
-function renderForecast(code, data) {
-  if (!data || !data[0]) return;
+function renderComment(code, data){
+  const el = document.getElementById("comment-" + code);
+  const card = document.getElementById("card-" + code);
 
-  const ts = data[0].timeSeries[0];
-  const area = ts.areas[0];
+  let text = "";
+  if(data.headlineText) text += data.headlineText + "\n";
+  if(data.text) text += data.text;
 
-  const weather = area.weathers[0];
-  const icon = getWeatherIcon(weather);
+  el.textContent = text || "なし";
 
-  document.querySelector(`#${code} .forecast`).innerHTML =
-    `<span class="weather-icon">${icon}</span>${weather}`;
+  if(text){
+    card.classList.add("alert");
+  }
 }
 
-// 概況
-function renderOverview(code, data) {
-  document.querySelector(`#${code} .overview`).textContent =
-    data.text || "データなし";
+async function fetchRegion(r){
+  try{
+    const [f,o,c] = await Promise.all([
+      fetch(`${r.path}/weather.json`).then(res=>res.json()),
+      fetch(`${r.path}/overview.json`).then(res=>res.json()),
+      fetch(`${r.path}/comment.json`).then(res=>res.json())
+    ]);
+
+    renderForecast(r.code, f);
+    renderOverview(r.code, o);
+    renderComment(r.code, c);
+
+  }catch(e){
+    console.error(e);
+  }
 }
 
-// コメント
-function renderComment(code, data) {
-  document.querySelector(`#${code} .comment`).textContent =
-    data.text || "データなし";
+async function init(){
+  const areas = document.getElementById("areas");
+  areas.innerHTML = "";
+
+  regions.forEach(r=>{
+    areas.appendChild(createCard(r));
+  });
+
+  await Promise.all(regions.map(fetchRegion));
+
+  document.getElementById("status").textContent =
+    "最終更新: " + new Date().toLocaleTimeString();
 }
 
-// 更新時間
-function updateTime() {
-  const now = new Date();
-  document.querySelector(".updated").textContent =
-    "最終更新: " + now.toLocaleString();
-}
-
-// 初期化
-async function init() {
-  await Promise.all([
-    fetchRegion("nara"),
-    fetchRegion("wakayama")
-  ]);
-
-  updateTime();
-}
-
-init();
-
+setInterval(init, 300000);
+window.onload = init;
 </script>
 
 </body>
