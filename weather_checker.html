@@ -191,13 +191,27 @@ function renderComment(code, data){
   const el = document.getElementById("comment-" + code);
   const card = document.getElementById("card-" + code);
 
+  if (!data || !data.areas) {
+    el.textContent = "なし";
+    return;
+  }
+
   let text = "";
-  if(data.headlineText) text += data.headlineText + "\n";
-  if(data.text) text += data.text;
+
+  data.areas.forEach(area => {
+    const warnings = area.warnings
+      .filter(w => w.status !== "なし")
+      .map(w => w.name);
+
+    if (warnings.length > 0) {
+      text += `${area.area.name}: ${warnings.join(", ")}\n`;
+    }
+  });
 
   el.textContent = text || "なし";
 
-  if(text){
+  // 警報があれば赤く
+  if (text) {
     card.classList.add("alert");
   }
 }
