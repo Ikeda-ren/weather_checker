@@ -7,16 +7,17 @@
 
   <style>
     :root {
-      --bg: linear-gradient(135deg, #4facfe, #00f2fe);
+      --bg: linear-gradient(135deg, #dfefff 0%, #eef7ff 100%);
       --card: #ffffff;
-      --card-sub: #f7faff;
-      --text: #1f2937;
-      --muted: #6b7280;
-      --line: #dbe4f0;
+      --card-sub: #ffffff;
+      --text: #222;
+      --muted: #666;
+      --line: #cfd8e3;
+      --head-bg: #f1f5f9;
       --accent: #2563eb;
-      --today: #ffe082;
-      --tomorrow: #bbdefb;
-      --shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+      --today: #fff2b8;
+      --tomorrow: #dcecff;
+      --shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
     }
 
     body.dark {
@@ -26,8 +27,9 @@
       --text: #f3f4f6;
       --muted: #cbd5e1;
       --line: #334155;
+      --head-bg: #253244;
       --accent: #60a5fa;
-      --today: #7c5c00;
+      --today: #6b5700;
       --tomorrow: #1d4ed8;
       --shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
     }
@@ -38,7 +40,7 @@
 
     body {
       margin: 0;
-      font-family: "Segoe UI", "Yu Gothic UI", Meiryo, sans-serif;
+      font-family: "Yu Gothic UI", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
       background: var(--bg);
       color: var(--text);
     }
@@ -47,7 +49,7 @@
       position: sticky;
       top: 0;
       z-index: 10;
-      padding: 16px 20px;
+      padding: 14px 18px;
       text-align: center;
       color: white;
       background: rgba(0, 0, 0, 0.18);
@@ -56,11 +58,12 @@
 
     header h1 {
       margin: 0 0 6px;
-      font-size: 1.8rem;
+      font-size: 1.6rem;
+      font-weight: 700;
     }
 
     #status {
-      font-size: 0.92rem;
+      font-size: 0.9rem;
       opacity: 0.95;
     }
 
@@ -89,17 +92,18 @@
       padding: 18px;
     }
 
+    /* 横幅が十分なら2列、狭ければ1列 */
     .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(560px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(620px, 1fr));
       gap: 18px;
       align-items: start;
     }
 
     .card {
       background: var(--card);
-      border-radius: 20px;
-      padding: 18px;
+      border-radius: 16px;
+      padding: 16px;
       box-shadow: var(--shadow);
       border: 1px solid rgba(255,255,255,.12);
       min-width: 0;
@@ -107,12 +111,13 @@
 
     .card h2 {
       margin: 0 0 6px;
-      font-size: 1.4rem;
+      font-size: 1.35rem;
+      font-weight: 700;
     }
 
     .time {
       color: var(--muted);
-      font-size: 0.9rem;
+      font-size: 0.88rem;
       margin-bottom: 12px;
     }
 
@@ -130,7 +135,7 @@
     .panel {
       background: var(--card-sub);
       border: 1px solid var(--line);
-      border-radius: 12px;
+      border-radius: 10px;
       padding: 12px;
       line-height: 1.7;
       white-space: pre-wrap;
@@ -144,32 +149,34 @@
     .table-wrap {
       overflow-x: auto;
       border: 1px solid var(--line);
-      border-radius: 12px;
+      border-radius: 10px;
       background: var(--card-sub);
     }
 
+    /* 気象庁っぽいシンプル表 */
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 520px;
+      min-width: 560px;
       font-size: 0.9rem;
+      table-layout: fixed;
     }
 
     th, td {
-      padding: 10px 8px;
-      border-bottom: 1px solid var(--line);
+      padding: 8px 6px;
+      border: 1px solid var(--line);
       text-align: center;
       vertical-align: top;
+      word-break: break-word;
     }
 
     th {
-      background: rgba(37, 99, 235, 0.08);
+      background: var(--head-bg);
       font-weight: 700;
     }
 
-    tr:last-child td,
-    tr:last-child th {
-      border-bottom: none;
+    .region-head {
+      width: 92px;
     }
 
     .today {
@@ -183,6 +190,7 @@
 
     .weather-cell {
       line-height: 1.5;
+      font-size: 0.88rem;
     }
 
     .weather-icon {
@@ -200,6 +208,14 @@
       font-weight: 700;
     }
 
+    .sub {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 0.8rem;
+      line-height: 1.35;
+    }
+
     .footer-note {
       margin-top: 16px;
       text-align: center;
@@ -208,13 +224,13 @@
       opacity: 0.9;
     }
 
-    @media (max-width: 620px) {
+    @media (max-width: 680px) {
       .grid {
         grid-template-columns: 1fr;
       }
 
       header h1 {
-        font-size: 1.4rem;
+        font-size: 1.35rem;
       }
 
       .page {
@@ -252,12 +268,12 @@
 
     function weatherIcon(text) {
       if (!text) return "🌈";
-      if (text.includes("晴")) return "☀️";
-      if (text.includes("曇")) return "☁️";
-      if (text.includes("雨")) return "🌧️";
-      if (text.includes("雪")) return "❄️";
-      if (text.includes("雷")) return "⛈️";
-      return "🌈";
+      if (text.includes("晴")) return "☀";
+      if (text.includes("曇")) return "☁";
+      if (text.includes("雨")) return "☔";
+      if (text.includes("雪")) return "❄";
+      if (text.includes("雷")) return "⚡";
+      return "○";
     }
 
     function createCard(region) {
@@ -322,7 +338,7 @@
       const tomorrow = new Date();
       tomorrow.setDate(today.getDate() + 1);
 
-      let html = "<table><tr><th>地域</th>";
+      let html = "<table><tr><th class='region-head'>地域</th>";
 
       ts.timeDefines.forEach(d => {
         const date = new Date(d);
@@ -336,13 +352,21 @@
       html += "</tr>";
 
       ts.areas.forEach(area => {
-        html += `<tr><th>${area.area?.name ?? "-"}</th>`;
+        html += `<tr><th class="region-head">${area.area?.name ?? "-"}</th>`;
 
-        (area.weathers || []).forEach(w => {
+        const weathers = area.weathers || [];
+        const pops = area.pops || [];
+        const winds = area.winds || [];
+
+        weathers.forEach((w, i) => {
+          const pop = pops[i] ? `降水 ${pops[i]}%` : "";
+          const wind = winds[i] || "";
+
           html += `
             <td class="weather-cell">
               <div class="weather-icon">${weatherIcon(w)}</div>
               <div>${w || "-"}</div>
+              ${pop || wind ? `<span class="sub">${pop}${pop && wind ? " / " : ""}${wind}</span>` : ""}
             </td>
           `;
         });
