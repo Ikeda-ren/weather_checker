@@ -53,7 +53,7 @@ jobs:
 
           if not raw_path.exists() or raw_path.stat().st_size == 0:
               out_path.write_text(
-                  json.dumps({"text": "コメント取得失敗"}, ensure_ascii=False, indent=2),
+                  json.dumps({"text": "コメント取得失敗", "bgcolor": "#ffffff"}, ensure_ascii=False, indent=2),
                   encoding="utf-8"
               )
               raise SystemExit(0)
@@ -73,12 +73,17 @@ jobs:
 
           text = text.replace("\r\n", "\n").replace("\r", "\n").strip()
 
-          # HTMLっぽい内容が混ざった場合の除去
-          if "<" in text and ">" in text:
-              text = re.sub(r'(?is)<script.*?>.*?</script>', '', text)
-              text = re.sub(r'(?is)<style.*?>.*?</style>', '', text)
-              text = re.sub(r'(?is)<[^>]+>', '\n', text)
-              text = html.unescape(text)
+          # body bgcolor の抽出
+          bgcolor = "#ffffff"
+          m = re.search(r'(?i)<body[^>]*bgcolor\s*=\s*["\']?([^"\'>\s]+)', text)
+          if m:
+              bgcolor = m.group(1).strip()
+
+          # HTML除去
+          text = re.sub(r'(?is)<script.*?>.*?</script>', '', text)
+          text = re.sub(r'(?is)<style.*?>.*?</style>', '', text)
+          text = re.sub(r'(?is)<[^>]+>', '\n', text)
+          text = html.unescape(text)
 
           lines = []
           for line in text.split("\n"):
@@ -86,20 +91,14 @@ jobs:
               if not s:
                   lines.append("")
                   continue
-              # HTML残骸を除去
               if s.startswith("<") or s.startswith("</"):
                   continue
               if s.lower().startswith("<!doctype"):
-                  continue
-              if s.lower().startswith("html"):
-                  continue
-              if s.lower().startswith("body"):
                   continue
               lines.append(s)
 
           text = "\n".join(lines)
 
-          # URL/リンク案内以降は削る
           stop_markers = [
               "〖主な防災情報のURL/リンク〗",
               "主な防災情報のURL/リンク",
@@ -117,11 +116,10 @@ jobs:
                   cut_pos = min(cut_pos, pos)
           text = text[:cut_pos].strip()
 
-          # 余分な空行を圧縮
           text = re.sub(r'\n{3,}', '\n\n', text).strip()
 
           out_path.write_text(
-              json.dumps({"text": text}, ensure_ascii=False, indent=2),
+              json.dumps({"text": text, "bgcolor": bgcolor}, ensure_ascii=False, indent=2),
               encoding="utf-8"
           )
           PY
@@ -158,7 +156,7 @@ jobs:
 
           if not raw_path.exists() or raw_path.stat().st_size == 0:
               out_path.write_text(
-                  json.dumps({"text": "コメント取得失敗"}, ensure_ascii=False, indent=2),
+                  json.dumps({"text": "コメント取得失敗", "bgcolor": "#ffffff"}, ensure_ascii=False, indent=2),
                   encoding="utf-8"
               )
               raise SystemExit(0)
@@ -178,11 +176,15 @@ jobs:
 
           text = text.replace("\r\n", "\n").replace("\r", "\n").strip()
 
-          if "<" in text and ">" in text:
-              text = re.sub(r'(?is)<script.*?>.*?</script>', '', text)
-              text = re.sub(r'(?is)<style.*?>.*?</style>', '', text)
-              text = re.sub(r'(?is)<[^>]+>', '\n', text)
-              text = html.unescape(text)
+          bgcolor = "#ffffff"
+          m = re.search(r'(?i)<body[^>]*bgcolor\s*=\s*["\']?([^"\'>\s]+)', text)
+          if m:
+              bgcolor = m.group(1).strip()
+
+          text = re.sub(r'(?is)<script.*?>.*?</script>', '', text)
+          text = re.sub(r'(?is)<style.*?>.*?</style>', '', text)
+          text = re.sub(r'(?is)<[^>]+>', '\n', text)
+          text = html.unescape(text)
 
           lines = []
           for line in text.split("\n"):
@@ -193,10 +195,6 @@ jobs:
               if s.startswith("<") or s.startswith("</"):
                   continue
               if s.lower().startswith("<!doctype"):
-                  continue
-              if s.lower().startswith("html"):
-                  continue
-              if s.lower().startswith("body"):
                   continue
               lines.append(s)
 
@@ -222,7 +220,7 @@ jobs:
           text = re.sub(r'\n{3,}', '\n\n', text).strip()
 
           out_path.write_text(
-              json.dumps({"text": text}, ensure_ascii=False, indent=2),
+              json.dumps({"text": text, "bgcolor": bgcolor}, ensure_ascii=False, indent=2),
               encoding="utf-8"
           )
           PY
