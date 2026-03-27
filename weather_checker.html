@@ -357,8 +357,7 @@
         return;
       }
 
-      const text = data.text || "コメントなし";
-      el.textContent = text;
+      el.textContent = data.text || "コメントなし";
     }
 
     async function fetchRegion(region) {
@@ -407,8 +406,6 @@
     }
 
     window.addEventListener("load", init);
-
-    // 5分ごと更新
     setInterval(init, 300000);
   </script>
 </body>
