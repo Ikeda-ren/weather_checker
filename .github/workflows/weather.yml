@@ -24,6 +24,7 @@ jobs:
           import html
           import urllib.request
           from pathlib import Path
+          from html.parser import HTMLParser
 
           regions = [
               {"folder": "shiga", "code": "250000", "name": "滋賀県"},
@@ -47,6 +48,32 @@ jobs:
               data = fetch_bytes(url)
               return json.loads(data.decode("utf-8"))
 
+          class CommentLinkParser(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.links = []
+                  self._current_href = None
+                  self._current_text = []
+
+              def handle_starttag(self, tag, attrs):
+                  if tag.lower() == "a":
+                      attr_map = dict(attrs)
+                      self._current_href = attr_map.get("href")
+                      self._current_text = []
+
+              def handle_data(self, data):
+                  if self._current_href is not None:
+                      self._current_text.append(data)
+
+              def handle_endtag(self, tag):
+                  if tag.lower() == "a" and self._current_href:
+                      text = "".join(self._current_text).strip()
+                      href = self._current_href.strip()
+                      if text and href:
+                          self.links.append({"label": text, "url": href})
+                      self._current_href = None
+                      self._current_text = []
+
           def parse_comment(raw: bytes):
               text = None
               for enc in ["cp932", "shift_jis", "utf-8", "euc_jp"]:
@@ -65,6 +92,9 @@ jobs:
               m = re.search(r'(?is)<body[^>]*bgcolor\s*=\s*["\']?([^"\'>\s]+)', text)
               if m:
                   bgcolor = m.group(1).strip()
+
+              parser = CommentLinkParser()
+              parser.feed(text)
 
               text = re.sub(r'(?i)<br\s*/?>', '\n', text)
               text = re.sub(r'(?i)</p\s*>', '\n', text)
@@ -93,7 +123,8 @@ jobs:
 
               return {
                   "text": text if text else "コメントなし",
-                  "bgcolor": bgcolor if bgcolor else "#ffffff"
+                  "bgcolor": bgcolor if bgcolor else "#ffffff",
+                  "links": parser.links
               }
 
           for region in regions:
@@ -119,7 +150,7 @@ jobs:
                   raw_comment = fetch_bytes(comment_url)
                   comment = parse_comment(raw_comment)
               except Exception:
-                  comment = {"text": "コメント取得失敗", "bgcolor": "#ffffff"}
+                  comment = {"text": "コメント取得失敗", "bgcolor": "#ffffff", "links": []}
 
               (folder / "weather.json").write_text(
                   json.dumps(weather, ensure_ascii=False, indent=2),
