@@ -198,14 +198,14 @@ function renderComment(code, data){
   const el = document.getElementById("comment-" + code);
   const card = document.getElementById("card-" + code);
 
-  if (!data || !data.areas) {
+  if (!data || !data[0] || !data[0].areas) {
     el.textContent = "なし";
     return;
   }
 
   let text = "";
 
-  data.areas.forEach(area => {
+  data[0].areas.forEach(area => {
     const warnings = area.warnings
       .filter(w => w.status !== "なし")
       .map(w => w.name);
@@ -217,7 +217,6 @@ function renderComment(code, data){
 
   el.textContent = text || "なし";
 
-  // 警報があれば赤く
   if (text) {
     card.classList.add("alert");
   }
