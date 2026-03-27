@@ -58,7 +58,7 @@
 
     header h1 {
       margin: 0 0 6px;
-      font-size: 1.6rem;
+      font-size: 1.5rem;
       font-weight: 700;
     }
 
@@ -69,33 +69,66 @@
 
     .toolbar {
       margin-top: 10px;
-      display: flex;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, auto));
       gap: 8px;
       justify-content: center;
-      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .toolbar button,
+    .toolbar select {
+      border: none;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-weight: 700;
+      box-shadow: 0 2px 8px rgba(0,0,0,.12);
     }
 
     .toolbar button {
+      cursor: pointer;
+      background: white;
+      color: #1f2937;
+    }
+
+    .toolbar select {
+      background: white;
+      color: #1f2937;
+    }
+
+    .page {
+      max-width: 1500px;
+      margin: 0 auto;
+      padding: 18px;
+    }
+
+    .pair-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 14px;
+      justify-content: center;
+    }
+
+    .pair-buttons button {
       border: none;
       border-radius: 999px;
       padding: 8px 14px;
       cursor: pointer;
-      background: white;
+      background: rgba(255,255,255,.85);
       color: #1f2937;
       font-weight: 700;
       box-shadow: 0 2px 8px rgba(0,0,0,.12);
     }
 
-    .page {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 18px;
+    .pair-buttons button.active {
+      background: #2563eb;
+      color: white;
     }
 
-    /* 横幅が十分なら2列、狭ければ1列 */
     .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(620px, 1fr));
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 18px;
       align-items: start;
     }
@@ -153,12 +186,11 @@
       background: var(--card-sub);
     }
 
-    /* 気象庁っぽいシンプル表 */
     table {
       width: 100%;
       border-collapse: collapse;
       min-width: 560px;
-      font-size: 0.9rem;
+      font-size: 0.88rem;
       table-layout: fixed;
     }
 
@@ -190,30 +222,61 @@
 
     .weather-cell {
       line-height: 1.5;
-      font-size: 0.88rem;
+      font-size: 0.86rem;
     }
 
     .weather-icon {
       display: inline-block;
-      font-size: 1.25rem;
+      font-size: 1.2rem;
       margin-bottom: 4px;
-    }
-
-    .muted {
-      color: var(--muted);
-    }
-
-    .error {
-      color: #b91c1c;
-      font-weight: 700;
     }
 
     .sub {
       display: block;
       margin-top: 4px;
       color: var(--muted);
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       line-height: 1.35;
+    }
+
+    .mini-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .mini-box {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      background: var(--card-sub);
+    }
+
+    .mini-box strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 0.9rem;
+    }
+
+    .chip-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .chip {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(37,99,235,.08);
+      border: 1px solid var(--line);
+      font-size: 0.8rem;
+    }
+
+    .error {
+      color: #b91c1c;
+      font-weight: 700;
     }
 
     .footer-note {
@@ -224,13 +287,15 @@
       opacity: 0.9;
     }
 
-    @media (max-width: 680px) {
+    @media (max-width: 1400px) {
       .grid {
         grid-template-columns: 1fr;
       }
+    }
 
+    @media (max-width: 680px) {
       header h1 {
-        font-size: 1.35rem;
+        font-size: 1.3rem;
       }
 
       .page {
@@ -240,6 +305,10 @@
       .card {
         padding: 14px;
       }
+
+      .toolbar {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
@@ -247,13 +316,19 @@
   <header>
     <h1>天気ダッシュボード Pro</h1>
     <div id="status">読み込み中...</div>
+
     <div class="toolbar">
+      <select id="leftSelect"></select>
+      <select id="rightSelect"></select>
+      <button type="button" onclick="applyManualSelection()">選択した府県で表示</button>
+      <button type="button" onclick="swapRegions()">左右入れ替え</button>
       <button type="button" onclick="toggleDarkMode()">ダークモード切替</button>
       <button type="button" onclick="init()">今すぐ更新</button>
     </div>
   </header>
 
   <main class="page">
+    <div class="pair-buttons" id="pairButtons"></div>
     <div class="grid" id="areas"></div>
     <div class="footer-note">
       データ取得元：気象庁公開データ / GitHub Pages
@@ -261,19 +336,103 @@
   </main>
 
   <script>
-    const regions = [
-      { code: "290000", name: "奈良県", path: "data/nara" },
-      { code: "300000", name: "和歌山県", path: "data/wakayama" }
+    const regionMap = {
+      shiga: { code: "250000", name: "滋賀県", path: "data/shiga" },
+      kyoto: { code: "260000", name: "京都府", path: "data/kyoto" },
+      osaka: { code: "270000", name: "大阪府", path: "data/osaka" },
+      hyogo: { code: "280000", name: "兵庫県", path: "data/hyogo" },
+      nara: { code: "290000", name: "奈良県", path: "data/nara" },
+      wakayama: { code: "300000", name: "和歌山県", path: "data/wakayama" }
+    };
+
+    const presetPairs = [
+      { label: "滋賀・京都", left: "shiga", right: "kyoto" },
+      { label: "大阪・兵庫", left: "osaka", right: "hyogo" },
+      { label: "奈良・和歌山", left: "nara", right: "wakayama" }
     ];
 
+    let currentLeft = "nara";
+    let currentRight = "wakayama";
+
     function weatherIcon(text) {
-      if (!text) return "🌈";
+      if (!text) return "○";
       if (text.includes("晴")) return "☀";
       if (text.includes("曇")) return "☁";
       if (text.includes("雨")) return "☔";
       if (text.includes("雪")) return "❄";
       if (text.includes("雷")) return "⚡";
       return "○";
+    }
+
+    function normalizeBgColor(bgcolor) {
+      if (!bgcolor) return "";
+      const v = String(bgcolor).trim();
+      if (/^#[0-9a-fA-F]{3,8}$/.test(v)) return v;
+      if (/^[0-9a-fA-F]{6}$/.test(v)) return `#${v}`;
+      if (/^[0-9a-fA-F]{3}$/.test(v)) return `#${v}`;
+      return v;
+    }
+
+    function populateSelectors() {
+      const left = document.getElementById("leftSelect");
+      const right = document.getElementById("rightSelect");
+
+      left.innerHTML = "";
+      right.innerHTML = "";
+
+      Object.entries(regionMap).forEach(([key, region]) => {
+        const opt1 = document.createElement("option");
+        opt1.value = key;
+        opt1.textContent = region.name;
+        left.appendChild(opt1);
+
+        const opt2 = document.createElement("option");
+        opt2.value = key;
+        opt2.textContent = region.name;
+        right.appendChild(opt2);
+      });
+
+      left.value = currentLeft;
+      right.value = currentRight;
+    }
+
+    function renderPairButtons() {
+      const wrap = document.getElementById("pairButtons");
+      wrap.innerHTML = "";
+
+      presetPairs.forEach(pair => {
+        const btn = document.createElement("button");
+        btn.textContent = pair.label;
+        if (pair.left === currentLeft && pair.right === currentRight) {
+          btn.classList.add("active");
+        }
+        btn.addEventListener("click", () => {
+          currentLeft = pair.left;
+          currentRight = pair.right;
+          populateSelectors();
+          renderPairButtons();
+          init();
+        });
+        wrap.appendChild(btn);
+      });
+    }
+
+    function applyManualSelection() {
+      const left = document.getElementById("leftSelect").value;
+      const right = document.getElementById("rightSelect").value;
+      currentLeft = left;
+      currentRight = right;
+      renderPairButtons();
+      init();
+    }
+
+    function swapRegions() {
+      const temp = currentLeft;
+      currentLeft = currentRight;
+      currentRight = temp;
+      populateSelectors();
+      renderPairButtons();
+      init();
     }
 
     function createCard(region) {
@@ -288,21 +447,21 @@
         <section class="section">
           <h3>天気予報</h3>
           <div id="forecast-${region.code}" class="table-wrap">
-            <div class="panel muted">読み込み中...</div>
+            <div class="panel">読み込み中...</div>
           </div>
+          <div id="extras-${region.code}" class="mini-grid"></div>
         </section>
 
         <section class="section">
           <h3>天気概況</h3>
-          <div id="overview-${region.code}" class="panel muted">読み込み中...</div>
+          <div id="overview-${region.code}" class="panel">読み込み中...</div>
         </section>
 
         <section class="section">
           <h3>気象台からのコメント</h3>
-          <div id="comment-${region.code}" class="panel comment-panel muted">読み込み中...</div>
+          <div id="comment-${region.code}" class="panel comment-panel">読み込み中...</div>
         </section>
       `;
-
       return el;
     }
 
@@ -314,33 +473,41 @@
       return await res.json();
     }
 
-    function normalizeBgColor(bgcolor) {
-      if (!bgcolor) return "";
-      const v = String(bgcolor).trim();
-
-      if (/^#[0-9a-fA-F]{3,8}$/.test(v)) return v;
-      if (/^[0-9a-fA-F]{6}$/.test(v)) return `#${v}`;
-      if (/^[0-9a-fA-F]{3}$/.test(v)) return `#${v}`;
-
-      return v;
+    function findSeries(data, propName) {
+      if (!Array.isArray(data) || !data[0]?.timeSeries) return null;
+      return data[0].timeSeries.find(ts =>
+        Array.isArray(ts.areas) &&
+        ts.areas.some(a => Array.isArray(a[propName]))
+      ) || null;
     }
 
-    function renderForecast(code, data) {
+    function findBestArea(areas, regionName) {
+      if (!Array.isArray(areas) || areas.length === 0) return null;
+      return (
+        areas.find(a => a.area?.name === regionName) ||
+        areas.find(a => regionName.includes(a.area?.name || "")) ||
+        areas[0]
+      );
+    }
+
+    function renderForecast(code, regionName, data) {
       const el = document.getElementById(`forecast-${code}`);
+      const extraEl = document.getElementById(`extras-${code}`);
 
       if (!Array.isArray(data) || !data[0]?.timeSeries?.[0]) {
         el.innerHTML = `<div class="panel error">天気予報データを読み込めませんでした。</div>`;
+        extraEl.innerHTML = "";
         return;
       }
 
-      const ts = data[0].timeSeries[0];
+      const weatherSeries = data[0].timeSeries[0];
       const today = new Date();
       const tomorrow = new Date();
       tomorrow.setDate(today.getDate() + 1);
 
       let html = "<table><tr><th class='region-head'>地域</th>";
 
-      ts.timeDefines.forEach(d => {
+      weatherSeries.timeDefines.forEach(d => {
         const date = new Date(d);
         let cls = "";
         if (date.toDateString() === today.toDateString()) cls = "today";
@@ -351,22 +518,23 @@
 
       html += "</tr>";
 
-      ts.areas.forEach(area => {
+      weatherSeries.areas.forEach(area => {
         html += `<tr><th class="region-head">${area.area?.name ?? "-"}</th>`;
 
         const weathers = area.weathers || [];
-        const pops = area.pops || [];
         const winds = area.winds || [];
+        const waves = area.waves || [];
 
         weathers.forEach((w, i) => {
-          const pop = pops[i] ? `降水 ${pops[i]}%` : "";
           const wind = winds[i] || "";
+          const wave = waves[i] || "";
 
           html += `
             <td class="weather-cell">
               <div class="weather-icon">${weatherIcon(w)}</div>
               <div>${w || "-"}</div>
-              ${pop || wind ? `<span class="sub">${pop}${pop && wind ? " / " : ""}${wind}</span>` : ""}
+              ${wind ? `<span class="sub">風: ${wind}</span>` : ""}
+              ${wave ? `<span class="sub">波: ${wave}</span>` : ""}
             </td>
           `;
         });
@@ -376,6 +544,56 @@
 
       html += "</table>";
       el.innerHTML = html;
+
+      const boxes = [];
+
+      const popSeries = findSeries(data, "pops");
+      if (popSeries) {
+        const popArea = findBestArea(popSeries.areas, regionName);
+        if (popArea) {
+          const chips = (popArea.pops || []).map((v, i) => {
+            const time = popSeries.timeDefines?.[i] ? new Date(popSeries.timeDefines[i]) : null;
+            const label = time
+              ? `${String(time.getMonth() + 1).padStart(2, "0")}/${String(time.getDate()).padStart(2, "0")} ${String(time.getHours()).padStart(2, "0")}時`
+              : `時点${i + 1}`;
+            return `<span class="chip">${label} ${v || "-"}%</span>`;
+          }).join("");
+
+          if (chips) {
+            boxes.push(`
+              <div class="mini-box">
+                <strong>降水確率</strong>
+                <div class="chip-list">${chips}</div>
+              </div>
+            `);
+          }
+        }
+      }
+
+      const tempSeries = findSeries(data, "temps");
+      if (tempSeries) {
+        const tempArea = findBestArea(tempSeries.areas, regionName);
+        if (tempArea) {
+          const chips = (tempArea.temps || []).map((v, i) => {
+            const time = tempSeries.timeDefines?.[i] ? new Date(tempSeries.timeDefines[i]) : null;
+            const label = time
+              ? `${String(time.getMonth() + 1).padStart(2, "0")}/${String(time.getDate()).padStart(2, "0")} ${String(time.getHours()).padStart(2, "0")}時`
+              : `時点${i + 1}`;
+            return `<span class="chip">${label} ${v || "-"}℃</span>`;
+          }).join("");
+
+          if (chips) {
+            boxes.push(`
+              <div class="mini-box">
+                <strong>気温</strong>
+                <div class="chip-list">${chips}</div>
+              </div>
+            `);
+          }
+        }
+      }
+
+      extraEl.innerHTML = boxes.join("");
     }
 
     function renderOverview(code, data) {
@@ -410,7 +628,9 @@
       }
     }
 
-    async function fetchRegion(region) {
+    async function fetchRegion(regionKey) {
+      const region = regionMap[regionKey];
+
       try {
         const [weather, overview, comment] = await Promise.all([
           fetchJson(`${region.path}/weather.json`),
@@ -418,7 +638,7 @@
           fetchJson(`${region.path}/comment.json`)
         ]);
 
-        renderForecast(region.code, weather);
+        renderForecast(region.code, region.name, weather);
         renderOverview(region.code, overview);
         renderComment(region.code, comment);
       } catch (err) {
@@ -426,6 +646,8 @@
 
         document.getElementById(`forecast-${region.code}`).innerHTML =
           `<div class="panel error">天気予報の取得に失敗しました。</div>`;
+
+        document.getElementById(`extras-${region.code}`).innerHTML = "";
 
         document.getElementById(`overview-${region.code}`).textContent =
           "天気概況の取得に失敗しました。";
@@ -442,11 +664,16 @@
       status.textContent = "更新中...";
       areas.innerHTML = "";
 
-      regions.forEach(region => {
-        areas.appendChild(createCard(region));
-      });
+      const leftRegion = regionMap[currentLeft];
+      const rightRegion = regionMap[currentRight];
 
-      await Promise.all(regions.map(fetchRegion));
+      areas.appendChild(createCard(leftRegion));
+      areas.appendChild(createCard(rightRegion));
+
+      await Promise.all([
+        fetchRegion(currentLeft),
+        fetchRegion(currentRight)
+      ]);
 
       status.textContent = "最終更新: " + new Date().toLocaleString("ja-JP");
     }
@@ -455,7 +682,12 @@
       document.body.classList.toggle("dark");
     }
 
-    window.addEventListener("load", init);
+    window.addEventListener("load", () => {
+      populateSelectors();
+      renderPairButtons();
+      init();
+    });
+
     setInterval(init, 300000);
   </script>
 </body>
