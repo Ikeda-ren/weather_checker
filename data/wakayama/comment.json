@@ -1,5 +1,50 @@
 {
-  "text": "コメント取得失敗",
-  "bgcolor": "#ffffff",
-  "links": []
+  "text": "2026年03月28日(土)16時48分\n\n★このリンクから警報・注意報や早期注意情報などの発表状況と合わせてご利用ください。\n\n【防災気象情報発表の見通し】\n・29日にかけて、警報、大雨・洪水・大雪注意報の発表予定はありません。\n\n 《リンク集》今注目の防災情報｜大雨・大雪が心配される時｜雨雲の動き｜今後の雨｜キキクル（危険度分布）｜早期注意情報の詳細｜今後の雪｜天気\n背景色について｜コンテンツの解説",
+  "bgcolor": "white",
+  "links": [
+    {
+      "label": "★このリンクから警報・注意報や早期注意情報などの発表状況と合わせてご利用ください。",
+      "url": "https://www.jma.go.jp/bosai/#pro&disp=panel,warning_summary,warning_time_series,radar,information,probability,forecaster_comment,flood,level_inundation,level_landslide,level_flood&col=726r71648h8k9xrd8s978z&row=7nen6wb4&area_type=offices&area_code=300000"
+    },
+    {
+      "label": "今注目の防災情報",
+      "url": "https://www.jma.go.jp/bosai/#area_type=offices&area_code=300000&pattern=default"
+    },
+    {
+      "label": "大雨・大雪が心配される時",
+      "url": "https://www.jma.go.jp/bosai/#pattern=rain_snow&area_type=offices&area_code=300000"
+    },
+    {
+      "label": "雨雲の動き",
+      "url": "https://www.jma.go.jp/bosai/nowc/#zoom:8/lat:33.931966/lon:135.458679/colordepth:normal/elements:hrpns&slmcs&slmcs_fcst"
+    },
+    {
+      "label": "今後の雨",
+      "url": "https://www.jma.go.jp/bosai/kaikotan/#zoom:8/lat:33.929688/lon:135.458679/colordepth:normal/elements:rasrf&slmcs&slmcs_fcst"
+    },
+    {
+      "label": "キキクル（危険度分布）",
+      "url": "https://www.jma.go.jp/bosai/#pattern=rain_level&area_type=offices&area_code=300000"
+    },
+    {
+      "label": "早期注意情報の詳細",
+      "url": "https://www.jma.go.jp/bosai/probability/#area_type=offices&area_code=300000&lang=ja"
+    },
+    {
+      "label": "今後の雪",
+      "url": "https://www.jma.go.jp/bosai/snow/"
+    },
+    {
+      "label": "天気",
+      "url": "https://www.jma.go.jp/bosai/#pattern=forecast&area_type=offices&area_code=300000"
+    },
+    {
+      "label": "背景色について",
+      "url": "https://www.data.jma.go.jp/wakayama/kishoudai/kcomment/bgcolor.html"
+    },
+    {
+      "label": "コンテンツの解説",
+      "url": "https://www.data.jma.go.jp/wakayama/kishoudai/kcomment.html"
+    }
+  ]
 }
