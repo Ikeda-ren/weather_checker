@@ -1,34 +1,34 @@
 {
-  "text": "2026年04月23日(木)10時00分\n\n【現時点での防災気象情報の発表の見通しなど】\n・23日は、大雨注意報を発表する可能性は低い見込みです。警報を発表する可能性はありません。\n・24日から25日にかけて、警報や大雨注意報を発表する可能性はありません。\n\n【背景色などについて】\n薄い赤色は警報発表中、薄い黄色は注意報発表中、白色は警報・注意報発表なしを表しています。\n発表中の主な防災気象情報は、下記URL/リンクからご確認ください。\n【主な防災情報のURL/リンク】\n府県気象情報：奈良県\n土砂災害警戒情報・警報・注意報：奈良県\n土砂キキクル（大雨警報（土砂災害）の危険度分布）\n浸水キキクル（大雨警報（浸水害）の危険度分布）\n洪水キキクル（洪水警報の危険度分布）\n雨雲の動き（目先の活動判断に）\n今後の雨（明るいうちの避難判断に）\n熱中症警戒アラート等発表状況＜環境省サイト＞\n暑さ指数の実況と予測（熱中症を予防するための活動の目安に）＜環境省サイト＞",
+  "text": "2026年04月23日(木)16時43分\n\n【現時点での防災気象情報の発表の見通しなど】\n・23日は、大雨注意報を発表する可能性は低い見込みです。警報を発表する可能性はありません。\n・24日から25日にかけて、警報や大雨注意報を発表する可能性はありません。\n\n【背景色などについて】\n薄い赤色は警報発表中、薄い黄色は注意報発表中、白色は警報・注意報発表なしを表しています。\n発表中の主な防災気象情報は、下記URL/リンクからご確認ください。\n【主な防災情報のURL/リンク】\n\n府県気象情報：奈良県\n土砂災害警戒情報・警報・注意報：奈良県\n土砂キキクル（大雨警報（土砂災害）の危険度分布）\n浸水キキクル（大雨警報（浸水害）の危険度分布）\n洪水キキクル（洪水警報の危険度分布）\n雨雲の動き（目先の活動判断に）\n今後の雨（明るいうちの避難判断に）\n熱中症警戒アラート等発表状況＜環境省サイト＞\n暑さ指数の実況と予測（熱中症を予防するための活動の目安に）＜環境省サイト＞",
   "bgcolor": "white",
   "links": [
     {
       "label": "府県気象情報：奈良県",
-      "url": "https://www.jma.go.jp/bosai/information/"
+      "url": "https://www.jma.go.jp/bosai/information/#area_type=offices&area_code=290000&format=table&offices_page=0"
     },
     {
       "label": "土砂災害警戒情報・警報・注意報：奈良県",
-      "url": "https://www.jma.go.jp/bosai/warning/"
+      "url": "https://www.jma.go.jp/bosai/warning/#area_type=offices&area_code=290000=ja"
     },
     {
       "label": "土砂キキクル（大雨警報（土砂災害）の危険度分布）",
-      "url": "https://www.jma.go.jp/bosai/risk/"
+      "url": "https://www.jma.go.jp/bosai/risk/#zoom:9/lat:34.332096/lon:135.902252/colordepth:normal/elements:land"
     },
     {
       "label": "浸水キキクル（大雨警報（浸水害）の危険度分布）",
-      "url": "https://www.jma.go.jp/bosai/risk/"
+      "url": "https://www.jma.go.jp/bosai/risk/#zoom:9/lat:34.332096/lon:135.902252/colordepth:normal/elements:inund"
     },
     {
       "label": "洪水キキクル（洪水警報の危険度分布）",
-      "url": "https://www.jma.go.jp/bosai/risk/"
+      "url": "https://www.jma.go.jp/bosai/risk/#zoom:9/lat:34.332096/lon:135.902252/colordepth:normal/elements:flood"
     },
     {
       "label": "雨雲の動き（目先の活動判断に）",
-      "url": "https://www.jma.go.jp/bosai/nowc/"
+      "url": "https://www.jma.go.jp/bosai/nowc/#zoom:9/lat:34.330962/lon:135.902252/colordepth:normal/elements:hrpns"
     },
     {
       "label": "今後の雨（明るいうちの避難判断に）",
-      "url": "https://www.jma.go.jp/bosai/kaikotan/"
+      "url": "https://www.jma.go.jp/bosai/kaikotan/#zoom:9/lat:34.332096/lon:135.902252/colordepth:normal/elements:rasrf"
     },
     {
       "label": "熱中症警戒アラート等発表状況",
