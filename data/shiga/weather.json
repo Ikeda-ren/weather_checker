@@ -1,7 +1,7 @@
 [
   {
     "publishingOffice": "彦根地方気象台",
-    "reportDatetime": "2026-05-22T05:00:00+09:00",
+    "reportDatetime": "2026-05-22T08:00:00+09:00",
     "timeSeries": [
       {
         "timeDefines": [
@@ -15,11 +15,11 @@
               "code": "250010"
             },
             "weatherCodes": [
-              "202",
+              "200",
               "200"
             ],
             "weathers": [
-              "くもり　明け方　まで　雨",
+              "くもり　所により　昼前　まで　雨",
               "くもり　所により　昼過ぎ　から　雨"
             ],
             "winds": [
