@@ -1,38 +1,5 @@
 {
-  "text": "2026年06月14日(日)16時00分\n\n【現時点での防災気象情報の発表の見通しなど】\n・16日にかけて、警報や大雨、土砂災害注意報を発表する可能性はありません。\n\n【背景色などについて】\n薄い赤色は警報以上を発表中、薄い黄色は注意報発表中、白色は警報・注意報発表なしを表しています。\n発表中の主な防災気象情報は、下記URL/リンクからご確認ください。\n\n【主な防災気象情報のURL/リンク】\n気象防災速報・気象解説情報等\n警報・注意報\n時系列情報（明日までの警報等の見通し）\nキキクル\n雨雲の動き（目先の活動判断に）\n今後の雨（明るいうちの避難判断に）\n熱中症警戒アラート等発表状況＜環境省サイト＞\n暑さ指数の実況と予測（熱中症を予防するための活動の目安に）＜環境省サイト＞",
-  "bgcolor": "white",
-  "links": [
-    {
-      "label": "気象防災速報・気象解説情報等",
-      "url": "https://www.jma.go.jp/bosai/information/#area_type=offices&area_code=290000&format=table&offices_page=0"
-    },
-    {
-      "label": "警報・注意報",
-      "url": "https://www.jma.go.jp/bosai/warning/#area_type=offices&area_code=290000=ja"
-    },
-    {
-      "label": "時系列情報（明日までの警報等の見通し）",
-      "url": "https://www.jma.go.jp/bosai/warning_timeline/#area_type=offices&area_code=290000&efilter=all&lfilter=all"
-    },
-    {
-      "label": "キキクル",
-      "url": "https://www.jma.go.jp/bosai/risk/#lat:34.333230/lon:135.900879/zoom:9/colordepth:normal/elements:land"
-    },
-    {
-      "label": "雨雲の動き（目先の活動判断に）",
-      "url": "https://www.jma.go.jp/bosai/nowc/#zoom:9/lat:34.330962/lon:135.900879/colordepth:normal/elements:hrpns"
-    },
-    {
-      "label": "今後の雨（明るいうちの避難判断に）",
-      "url": "https://www.jma.go.jp/bosai/kaikotan/#zoom:9/lat:34.333230/lon:135.900879/colordepth:normal/elements:rasrf"
-    },
-    {
-      "label": "熱中症警戒アラート等発表状況",
-      "url": "https://www.wbgt.env.go.jp/alert.php"
-    },
-    {
-      "label": "暑さ指数の実況と予測（熱中症を予防するための活動の目安に）",
-      "url": "https://www.wbgt.env.go.jp/wbgt_data.php?region=07&prefecture=64"
-    }
-  ]
+  "text": "コメント取得失敗",
+  "bgcolor": "#ffffff",
+  "links": []
 }
